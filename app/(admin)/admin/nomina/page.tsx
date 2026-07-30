@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getPayrollRuns } from "@/lib/data/admin";
-import { formatCredits, formatDateTime } from "@/lib/data/dashboard";
+import { formatCredits, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentProfile } from "@/lib/data/profile";
 import { getFullCatalog } from "@/lib/data/catalog";
-import { formatCredits } from "@/lib/data/dashboard";
+import { formatCredits } from "@/lib/format";
 import { CatalogTabs } from "@/components/shop/catalog-tabs";
 
 export const metadata: Metadata = { title: "Tienda — G.O.C.S." };

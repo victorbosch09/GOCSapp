@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { formatCredits } from "@/lib/data/dashboard";
+import { formatCredits } from "@/lib/format";
 import type { Notification, Transaction } from "@/types/database";
 
 /**

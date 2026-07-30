@@ -1,15 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentProfile } from "@/lib/data/profile";
-import {
-  getOwnTransactions,
-  getOwnContracts,
-  getOwnNotifications,
-  nextPaymentDate,
-  formatCredits,
-  formatDate,
-  formatDateTime,
-  rankLabel,
-} from "@/lib/data/dashboard";
+import { getOwnTransactions, getOwnContracts, getOwnNotifications } from "@/lib/data/dashboard";
+import { nextPaymentDate, formatCredits, formatDate, formatDateTime, rankLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

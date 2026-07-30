@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { approveProfile, updateProfileRank, updateProfileSquad, manualAdjustment } from "@/lib/actions/admin";
-import { formatCredits } from "@/lib/data/dashboard";
+import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";

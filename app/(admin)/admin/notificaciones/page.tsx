@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getAllProfiles, getRecentNotifications } from "@/lib/data/admin";
-import { formatDateTime } from "@/lib/data/dashboard";
+import { formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NotificationForm } from "@/components/admin/notification-form";

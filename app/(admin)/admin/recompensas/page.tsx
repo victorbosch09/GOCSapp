@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getAllProfiles, getRecentRewards } from "@/lib/data/admin";
-import { formatCredits, formatDateTime } from "@/lib/data/dashboard";
+import { formatCredits, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RewardForm } from "@/components/admin/reward-form";
 

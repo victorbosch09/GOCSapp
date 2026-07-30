@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllProfiles, getPayrollRuns } from "@/lib/data/admin";
-import { formatCredits, formatDateTime } from "@/lib/data/dashboard";
+import { formatCredits, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApproveButton } from "@/components/admin/approve-button";
