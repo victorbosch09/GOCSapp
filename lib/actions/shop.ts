@@ -41,3 +41,28 @@ export async function purchaseItem(itemTable: CatalogTable, itemId: string) {
   revalidatePath("/dashboard");
   return { data };
 }
+
+export async function sellItem(inventoryId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Tenés que iniciar sesión." };
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("sell_item", {
+    p_profile_id: user.id,
+    p_inventory_id: inventoryId,
+  });
+
+  if (error) {
+    return { error: error.message.replace(/^.*?:\s*/, "") };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/tienda");
+  return { data };
+}

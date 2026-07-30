@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { getAllProfiles, getRanks } from "@/lib/data/admin";
+import { requireCommandStaff } from "@/lib/data/profile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SoldadosTable } from "@/components/admin/soldados-table";
 
 export const metadata: Metadata = { title: "Soldados — Mando G.O.C.S." };
 
 export default async function AdminSoldadosPage() {
-  const [profiles, ranks] = await Promise.all([getAllProfiles(), getRanks()]);
+  const [me, profiles, ranks] = await Promise.all([
+    requireCommandStaff(),
+    getAllProfiles(),
+    getRanks(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,7 +27,7 @@ export default async function AdminSoldadosPage() {
           <CardDescription>{profiles.length} perfiles registrados.</CardDescription>
         </CardHeader>
         <CardContent>
-          <SoldadosTable profiles={profiles} ranks={ranks} />
+          <SoldadosTable profiles={profiles} ranks={ranks} currentProfileId={me.id} />
         </CardContent>
       </Card>
     </div>

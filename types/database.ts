@@ -66,7 +66,9 @@ export type TransactionType =
   | "Compra Vehiculo"
   | "Descuento"
   | "Sancion"
-  | "Ajuste Manual";
+  | "Ajuste Manual"
+  | "Venta Armamento"
+  | "Venta Vehiculo";
 
 export type Transaction = {
   id: string;
@@ -102,6 +104,7 @@ export type Contract = {
   total_amount: number;
   logged_by: string | null;
   notes: string | null;
+  transaction_id: string | null;
   created_at: string;
 };
 
@@ -124,6 +127,7 @@ export type Reward = {
   description: string | null;
   amount: number | null;
   awarded_by: string | null;
+  transaction_id: string | null;
   awarded_at: string;
 };
 
@@ -145,6 +149,7 @@ export type Sanction = {
   description: string | null;
   amount_deducted: number | null;
   applied_by: string | null;
+  transaction_id: string | null;
   applied_at: string;
 };
 
@@ -169,6 +174,71 @@ export type PayrollRun = {
   total_amount: number;
   status: "success" | "error";
   notes: string | null;
+};
+
+export type InventoryItem = {
+  id: string;
+  profile_id: string;
+  item_table: "weapons" | "equipment" | "accessories" | "vehicles";
+  item_id: string;
+  item_name: string;
+  item_category: string | null;
+  purchase_price: number;
+  acquired_at: string;
+  purchase_transaction_id: string | null;
+};
+
+export type RsvpResponse = "asiste" | "tal_vez" | "no_asiste";
+
+export type EventRsvp = {
+  id: string;
+  event_id: string;
+  profile_id: string;
+  response: RsvpResponse;
+  responded_at: string;
+};
+
+export type EventAttendance = {
+  id: string;
+  event_id: string;
+  profile_id: string;
+  attended: boolean;
+  marked_by: string | null;
+  marked_at: string;
+};
+
+export type SkillCategory = string;
+
+export type Skill = {
+  id: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+};
+
+export type SkillResult = "aprobado" | "no_aprobado" | "en_progreso";
+
+export type SkillEvaluation = {
+  id: string;
+  profile_id: string;
+  skill_id: string;
+  result: SkillResult;
+  score: number | null;
+  notes: string | null;
+  evaluated_by: string | null;
+  evaluated_at: string;
+};
+
+export type TrainingMaterial = {
+  id: string;
+  title: string;
+  description: string | null;
+  url: string | null;
+  category: string | null;
+  uploaded_by: string | null;
+  created_at: string;
 };
 
 export type TeamOverview = {
@@ -222,6 +292,12 @@ export type Database = {
       sanctions: TableDef<Sanction, Partial<Sanction>>;
       events: TableDef<Event, Partial<Event>>;
       payroll_runs: TableDef<PayrollRun, Partial<PayrollRun>>;
+      inventory: TableDef<InventoryItem, Partial<InventoryItem>>;
+      event_rsvps: TableDef<EventRsvp, Partial<EventRsvp>>;
+      event_attendance: TableDef<EventAttendance, Partial<EventAttendance>>;
+      skills: TableDef<Skill, Partial<Skill>>;
+      skill_evaluations: TableDef<SkillEvaluation, Partial<SkillEvaluation>>;
+      training_materials: TableDef<TrainingMaterial, Partial<TrainingMaterial>>;
     };
     Views: {
       team_overview: ViewDef<TeamOverview>;
@@ -230,6 +306,10 @@ export type Database = {
     Functions: {
       purchase_item: {
         Args: { p_profile_id: string; p_item_table: string; p_item_id: string };
+        Returns: Transaction;
+      };
+      sell_item: {
+        Args: { p_profile_id: string; p_inventory_id: string };
         Returns: Transaction;
       };
       run_weekly_payroll: {

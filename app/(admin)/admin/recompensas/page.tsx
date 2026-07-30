@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { getAllProfiles, getRecentRewards } from "@/lib/data/admin";
-import { formatCredits, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RewardForm } from "@/components/admin/reward-form";
+import { RewardList } from "@/components/admin/reward-list";
 
 export const metadata: Metadata = { title: "Recompensas — Mando G.O.C.S." };
 
@@ -28,23 +28,8 @@ export default async function AdminRecompensasPage() {
           <CardTitle className="font-heading text-base">Últimas entregadas</CardTitle>
           <CardDescription>{rewards.length} registros recientes.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {rewards.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin recompensas entregadas todavía.</p>
-          ) : (
-            rewards.map((r) => (
-              <div key={r.id} className="rounded-md border border-border/60 p-3 text-sm">
-                <p className="font-medium">
-                  {r.title}
-                  {r.amount ? ` · ${formatCredits(r.amount)}` : ""}
-                </p>
-                <p className="text-muted-foreground">
-                  {(r as unknown as { profile?: { callsign: string } }).profile?.callsign} ·{" "}
-                  {formatDateTime(r.awarded_at)}
-                </p>
-              </div>
-            ))
-          )}
+        <CardContent>
+          <RewardList rewards={rewards} />
         </CardContent>
       </Card>
     </div>

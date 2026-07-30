@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import { getCurrentProfile } from "@/lib/data/profile";
-import { getOwnTransactions, getOwnContracts, getOwnNotifications } from "@/lib/data/dashboard";
+import {
+  getOwnTransactions,
+  getOwnContracts,
+  getOwnNotifications,
+  getOwnInventory,
+} from "@/lib/data/dashboard";
 import { nextPaymentDate, formatCredits, formatDate, formatDateTime, rankLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { InventoryCard } from "@/components/dashboard/inventory-card";
 
 export const metadata: Metadata = { title: "Portal — G.O.C.S." };
 
@@ -13,17 +19,20 @@ const TXN_BADGE: Record<string, string> = {
   Bono: "bg-emerald-500/15 text-emerald-400",
   "Compra Armamento": "bg-primary/15 text-foreground",
   "Compra Vehiculo": "bg-primary/15 text-foreground",
+  "Venta Armamento": "bg-emerald-500/15 text-emerald-400",
+  "Venta Vehiculo": "bg-emerald-500/15 text-emerald-400",
   Descuento: "bg-destructive/15 text-destructive",
   Sancion: "bg-destructive/15 text-destructive",
   "Ajuste Manual": "bg-muted text-muted-foreground",
 };
 
 export default async function DashboardPage() {
-  const [profile, transactions, contracts, notifications] = await Promise.all([
+  const [profile, transactions, contracts, notifications, inventory] = await Promise.all([
     getCurrentProfile(),
     getOwnTransactions(),
     getOwnContracts(),
     getOwnNotifications(),
+    getOwnInventory(),
   ]);
 
   return (
@@ -137,6 +146,8 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <InventoryCard items={inventory} />
 
       <Card>
         <CardHeader>

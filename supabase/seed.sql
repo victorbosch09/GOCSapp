@@ -140,3 +140,21 @@ insert into public.sanction_types (severity, label, description, sort_order) val
   ('extrema', 'Violaciones eticas graves (racismo, sexismo, etc.)', NULL, 22),
   ('extrema', 'Comportamiento extremadamente toxico o peligroso para otros', NULL, 23);
 
+
+-- ============ CATALOGO DE HABILIDADES / MODULOS DE INSTRUCCION ============
+insert into public.skills (name, category, description, sort_order) values
+  ('Mod 1', 'Modulo', 'Modulo de instruccion basica 1.', 1),
+  ('Mod 2', 'Modulo', 'Modulo de instruccion basica 2.', 2),
+  ('Mod 3', 'Modulo', 'Modulo de instruccion basica 3.', 3),
+  ('Mod 4', 'Modulo', 'Modulo de instruccion basica 4.', 4),
+  ('Mod 5', 'Modulo', 'Modulo de instruccion avanzada 5.', 5),
+  ('Mod 6', 'Modulo', 'Modulo de instruccion avanzada 6.', 6),
+  ('Mod 7', 'Modulo', 'Modulo de instruccion avanzada 7.', 7),
+  ('Mod 8', 'Modulo', 'Modulo de instruccion avanzada 8.', 8),
+  ('Mod 9', 'Modulo', 'Modulo de especializacion 9.', 9),
+  ('Mod 10', 'Modulo', 'Modulo de especializacion 10.', 10),
+  ('Mod 11', 'Modulo', 'Modulo de especializacion 11.', 11),
+  ('Curso Rol Especializado', 'Curso especializado', 'Certificacion de rol especializado dentro de una escuadra.', 12),
+  ('Curso Lider de Equipo', 'Curso de liderazgo', 'Certificacion para dirigir una escuadra en operaciones.', 13),
+  ('Curso Lider de Escuadra', 'Curso de liderazgo', 'Certificacion para supervisar multiples escuadras en operaciones.', 14)
+on conflict (name) do update set category = excluded.category, description = excluded.description, sort_order = excluded.sort_order;

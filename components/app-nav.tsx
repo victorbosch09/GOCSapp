@@ -12,6 +12,8 @@ const LINKS = [
   { href: "/tienda", label: "Tienda" },
   { href: "/equipo", label: "Equipo" },
   { href: "/calendario", label: "Calendario" },
+  { href: "/asistencia", label: "Asistencia" },
+  { href: "/entrenamiento", label: "Entrenamiento" },
 ];
 
 export function AppNav({ isCommandStaff }: { isCommandStaff: boolean }) {

@@ -21,6 +21,15 @@ export async function getOwnContracts(limit = 10) {
   return data ?? [];
 }
 
+export async function getOwnInventory() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("inventory")
+    .select("*")
+    .order("acquired_at", { ascending: false });
+  return data ?? [];
+}
+
 export async function getOwnNotifications(limit = 10) {
   const supabase = await createClient();
   const { data } = await supabase

@@ -18,7 +18,18 @@ export async function login(_state: AuthFormState, formData: FormData): Promise<
   const { error } = await supabase.auth.signInWithPassword(validated.data);
 
   if (error) {
-    return { message: "Correo o contraseña incorrectos." };
+    console.error("[login] Supabase auth error:", error.code, error.status, error.message);
+
+    if (error.code === "email_not_confirmed") {
+      return { message: "Tu correo todavía no está confirmado. Revisá tu bandeja de entrada." };
+    }
+    if (error.code === "over_request_rate_limit" || error.code === "over_email_send_rate_limit") {
+      return { message: "Demasiados intentos. Esperá un minuto y volvé a intentar." };
+    }
+    if (error.code === "invalid_credentials") {
+      return { message: "Correo o contraseña incorrectos." };
+    }
+    return { message: `No se pudo iniciar sesión (${error.code ?? "error desconocido"}). Intentá de nuevo.` };
   }
 
   redirect("/dashboard");
@@ -45,10 +56,26 @@ export async function signup(_state: AuthFormState, formData: FormData): Promise
   });
 
   if (error) {
-    if (error.message.toLowerCase().includes("already registered")) {
+    console.error("[signup] Supabase auth error:", error.code, error.status, error.message);
+
+    if (error.code === "user_already_exists" || error.message.toLowerCase().includes("already registered")) {
       return { message: "Ese correo ya tiene una cuenta registrada." };
     }
-    return { message: "No se pudo crear la cuenta. Intentá de nuevo." };
+    if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit") {
+      return {
+        message:
+          "Se alcanzó el límite de registros por hora del servidor de correo. Esperá unos minutos y volvé a intentar, o avisale a un mando.",
+      };
+    }
+    if (error.code === "weak_password") {
+      return { message: "La contraseña es muy débil. Probá con una más larga o menos común." };
+    }
+    if (error.code === "validation_failed" || error.code === "email_address_invalid") {
+      return { message: "Ese correo no es válido." };
+    }
+    return {
+      message: `No se pudo crear la cuenta (${error.code ?? "error desconocido"}). Intentá de nuevo o avisale a un mando.`,
+    };
   }
 
   if (!data.session) {

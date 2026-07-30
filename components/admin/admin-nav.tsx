@@ -7,11 +7,15 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { href: "/admin", label: "Resumen" },
   { href: "/admin/soldados", label: "Soldados" },
+  { href: "/admin/rangos", label: "Rangos" },
   { href: "/admin/catalogo", label: "Catálogo" },
+  { href: "/admin/movimientos", label: "Movimientos" },
   { href: "/admin/contratos", label: "Contratos" },
   { href: "/admin/sanciones", label: "Sanciones" },
   { href: "/admin/recompensas", label: "Recompensas" },
   { href: "/admin/notificaciones", label: "Notificaciones" },
+  { href: "/admin/asistencia", label: "Asistencia" },
+  { href: "/admin/entrenamiento", label: "Entrenamiento" },
   { href: "/admin/calendario", label: "Calendario" },
   { href: "/admin/nomina", label: "Nómina" },
 ];
