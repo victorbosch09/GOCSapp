@@ -31,6 +31,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { downloadCsv } from "@/lib/csv";
 import type { Profile, Rank, Transaction, TransactionType } from "@/types/database";
 
 type ProfileRow = Profile & { rank: Rank | null };
@@ -55,25 +56,51 @@ export function SoldadosTable({
   currentProfileId: string;
 }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Operador</TableHead>
-          <TableHead>Rango</TableHead>
-          <TableHead>Escuadra</TableHead>
-          <TableHead className="text-right">Saldo</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead>Mando</TableHead>
-          <TableHead>Instructor</TableHead>
-          <TableHead className="text-right">Acciones</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {profiles.map((p) => (
-          <SoldadoRow key={p.id} profile={p} ranks={ranks} currentProfileId={currentProfileId} />
-        ))}
-      </TableBody>
-    </Table>
+    <div className="flex flex-col gap-3">
+      <Button
+        size="sm"
+        variant="outline"
+        className="self-end"
+        onClick={() =>
+          downloadCsv(
+            `gocs-soldados-${new Date().toISOString().slice(0, 10)}.csv`,
+            profiles.map((p) => ({
+              callsign: p.callsign,
+              rango: p.rank?.name ?? "",
+              escuadra: p.squad ?? "",
+              saldo: p.cached_balance,
+              aprobado: p.approved ? "si" : "no",
+              mando: p.is_command_staff ? "si" : "no",
+              instructor: p.is_instructor ? "si" : "no",
+              ingreso: p.join_date,
+            }))
+          )
+        }
+      >
+        Exportar CSV
+      </Button>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Operador</TableHead>
+              <TableHead>Rango</TableHead>
+              <TableHead>Escuadra</TableHead>
+              <TableHead className="text-right">Saldo</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Mando</TableHead>
+              <TableHead>Instructor</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {profiles.map((p) => (
+              <SoldadoRow key={p.id} profile={p} ranks={ranks} currentProfileId={currentProfileId} />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
   );
 }
 

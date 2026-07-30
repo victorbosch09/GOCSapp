@@ -19,12 +19,31 @@ export const SignupSchema = z.object({
     .regex(/[0-9]/, { message: "Debe contener al menos un número." }),
 });
 
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email({ message: "Ingresá un correo válido." }),
+});
+
+export const ResetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, { message: "Al menos 8 caracteres." })
+      .regex(/[a-zA-Z]/, { message: "Debe contener al menos una letra." })
+      .regex(/[0-9]/, { message: "Debe contener al menos un número." }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden.",
+    path: ["confirmPassword"],
+  });
+
 export type AuthFormState =
   | {
       errors?: {
         callsign?: string[];
         email?: string[];
         password?: string[];
+        confirmPassword?: string[];
       };
       message?: string;
     }

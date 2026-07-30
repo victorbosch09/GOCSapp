@@ -6,6 +6,8 @@ const PROTECTED_PREFIXES = [
   "/tienda",
   "/equipo",
   "/calendario",
+  "/asistencia",
+  "/entrenamiento",
   "/admin",
 ];
 
