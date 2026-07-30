@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { purchaseItem } from "@/lib/actions/shop";
@@ -34,10 +35,12 @@ export function CatalogTabs({
   initial,
   balance,
   canBuy,
+  myRankSortOrder,
 }: {
   initial: Record<Table, (CatalogItem | Vehicle)[]>;
   balance: number;
   canBuy: boolean;
+  myRankSortOrder: number;
 }) {
   const [data, setData] = useState(initial);
 
@@ -98,6 +101,7 @@ export function CatalogTabs({
                       table={table}
                       balance={balance}
                       canBuy={canBuy}
+                      myRankSortOrder={myRankSortOrder}
                     />
                   ))}
                 </div>
@@ -115,19 +119,23 @@ function ItemCard({
   table,
   balance,
   canBuy,
+  myRankSortOrder,
 }: {
   item: CatalogItem | Vehicle;
   table: Table;
   balance: number;
   canBuy: boolean;
+  myRankSortOrder: number;
 }) {
   const [pending, startTransition] = useTransition();
   const magStd = "mag_price_standard" in item ? item.mag_price_standard : null;
   const magSpecial = "mag_price_special" in item ? item.mag_price_special : null;
   const capacity = "capacity" in item ? item.capacity : null;
+  const minRank = "min_rank_sort_order" in item ? item.min_rank_sort_order : null;
 
   const affordable = balance >= item.price;
-  const disabled = pending || !canBuy || !item.in_stock || !affordable;
+  const rankOk = minRank == null || myRankSortOrder >= minRank;
+  const disabled = pending || !canBuy || !item.in_stock || !affordable || !rankOk;
 
   function handleBuy() {
     startTransition(async () => {
@@ -151,6 +159,18 @@ function ItemCard({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
+        {item.image_url && (
+          <div className="flex h-24 items-center justify-center rounded-md bg-muted/30">
+            <Image
+              src={item.image_url}
+              alt={item.name}
+              width={80}
+              height={80}
+              className="object-contain"
+              unoptimized
+            />
+          </div>
+        )}
         <p className="font-heading text-lg text-gocs-red">{formatCredits(item.price)}</p>
         {capacity && <p className="text-xs text-muted-foreground">{capacity}</p>}
         {(magStd || magSpecial) && (
@@ -160,14 +180,21 @@ function ItemCard({
           </p>
         )}
         {item.notes && <p className="text-xs text-muted-foreground">{item.notes}</p>}
+        {!rankOk && (
+          <p className="text-xs text-destructive">🔒 Requiere un rango más alto para comprar.</p>
+        )}
         <Button
           size="sm"
-          className="mt-2"
+          className={
+            item.in_stock && affordable && canBuy && rankOk
+              ? "mt-2 bg-emerald-600 text-white hover:bg-emerald-500"
+              : "mt-2"
+          }
           disabled={disabled}
           onClick={handleBuy}
-          title={!affordable ? "Saldo insuficiente" : undefined}
+          title={!affordable ? "Saldo insuficiente" : !rankOk ? "Rango insuficiente" : undefined}
         >
-          {pending ? "Comprando..." : "Comprar"}
+          {pending ? "Comprando..." : !rankOk ? "Rango insuficiente" : "Comprar"}
         </Button>
       </CardContent>
     </Card>

@@ -20,12 +20,17 @@ const LINKS = [
   { href: "/admin/nomina", label: "Nómina" },
 ];
 
-export function AdminNav() {
+const INSTRUCTOR_LINKS = ["/admin/entrenamiento"];
+
+export function AdminNav({ instructorOnly = false }: { instructorOnly?: boolean }) {
   const pathname = usePathname();
+  const links = instructorOnly
+    ? LINKS.filter((l) => INSTRUCTOR_LINKS.includes(l.href))
+    : LINKS;
 
   return (
     <nav className="flex shrink-0 gap-1 overflow-x-auto lg:w-48 lg:flex-col lg:overflow-visible">
-      {LINKS.map((link) => {
+      {links.map((link) => {
         const active = link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
         return (
           <Link

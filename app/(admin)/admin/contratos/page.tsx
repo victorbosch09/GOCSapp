@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
-import { getAllProfiles, getContractBonusTypes, getContractRiskLevels } from "@/lib/data/admin";
+import {
+  getAllProfiles,
+  getContractBonusTypes,
+  getContractRiskLevels,
+  getRecentContracts,
+} from "@/lib/data/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ContractForm } from "@/components/admin/contract-form";
+import { ContractList } from "@/components/admin/contract-list";
 
 export const metadata: Metadata = { title: "Contratos — Mando G.O.C.S." };
 
 export default async function AdminContratosPage() {
-  const [profiles, bonusTypes, riskLevels] = await Promise.all([
+  const [profiles, bonusTypes, riskLevels, contracts] = await Promise.all([
     getAllProfiles(),
     getContractBonusTypes(),
     getContractRiskLevels(),
+    getRecentContracts(),
   ]);
 
   return (
@@ -32,6 +39,15 @@ export default async function AdminContratosPage() {
             bonusTypes={bonusTypes}
             riskLevels={riskLevels}
           />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Historial de contratos</CardTitle>
+          <CardDescription>Editable/borrable por si hay un error de carga.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ContractList contracts={contracts} />
         </CardContent>
       </Card>
     </div>

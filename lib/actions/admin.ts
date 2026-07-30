@@ -10,6 +10,22 @@ type ActionResult = { error?: string; success?: true };
 const CATALOG_TABLES = ["weapons", "equipment", "accessories", "vehicles"] as const;
 type CatalogTable = (typeof CATALOG_TABLES)[number];
 
+/** Registra una acción sensible en el log de auditoría (solo lectura para mando). */
+async function logAudit(
+  actorId: string,
+  action: string,
+  targetProfileId: string | null,
+  detail: string
+) {
+  const admin = createAdminClient();
+  await admin.from("admin_audit_log").insert({
+    actor_id: actorId,
+    action,
+    target_profile_id: targetProfileId,
+    detail,
+  });
+}
+
 // ============================================================
 // ADMISIÓN / ROSTER
 // ============================================================
@@ -59,6 +75,20 @@ export async function setCommandStaff(profileId: string, isStaff: boolean): Prom
     .update({ is_command_staff: isStaff })
     .eq("id", profileId);
   if (error) return { error: error.message };
+  await logAudit(staff.id, isStaff ? "grant_command_staff" : "revoke_command_staff", profileId, "");
+  revalidatePath("/admin/soldados");
+  return { success: true };
+}
+
+/** Otorga o revoca el rol liviano de instructor (solo /entrenamiento). */
+export async function setInstructor(profileId: string, isInstructor: boolean): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ is_instructor: isInstructor })
+    .eq("id", profileId);
+  if (error) return { error: error.message };
   revalidatePath("/admin/soldados");
   return { success: true };
 }
@@ -80,6 +110,7 @@ export async function manualAdjustment(
     created_by: staff.id,
   });
   if (error) return { error: error.message };
+  await logAudit(staff.id, "manual_adjustment", profileId, `${amount} cr — ${notes || "sin nota"}`);
   revalidatePath("/admin/soldados");
   revalidatePath("/dashboard");
   return { success: true };
@@ -92,10 +123,21 @@ export async function updateTransaction(
   transactionId: string,
   patch: { amount?: number; type?: TransactionType; detail?: string | null; notes?: string | null }
 ): Promise<ActionResult> {
-  await requireCommandStaff();
+  const staff = await requireCommandStaff();
   const admin = createAdminClient();
+  const { data: before } = await admin
+    .from("transactions")
+    .select("profile_id, amount, type")
+    .eq("id", transactionId)
+    .single();
   const { error } = await admin.from("transactions").update(patch).eq("id", transactionId);
   if (error) return { error: error.message };
+  await logAudit(
+    staff.id,
+    "edit_transaction",
+    before?.profile_id ?? null,
+    `${before?.type} ${before?.amount} → ${JSON.stringify(patch)}`
+  );
   revalidatePath("/admin/soldados");
   revalidatePath("/dashboard");
   return { success: true };
@@ -114,10 +156,21 @@ export async function listTransactions(profileId: string) {
 }
 
 export async function deleteTransaction(transactionId: string): Promise<ActionResult> {
-  await requireCommandStaff();
+  const staff = await requireCommandStaff();
   const admin = createAdminClient();
+  const { data: before } = await admin
+    .from("transactions")
+    .select("profile_id, amount, type, detail")
+    .eq("id", transactionId)
+    .single();
   const { error } = await admin.from("transactions").delete().eq("id", transactionId);
   if (error) return { error: error.message };
+  await logAudit(
+    staff.id,
+    "delete_transaction",
+    before?.profile_id ?? null,
+    `${before?.type} ${before?.amount} (${before?.detail ?? ""})`
+  );
   revalidatePath("/admin/soldados");
   revalidatePath("/dashboard");
   return { success: true };
@@ -151,8 +204,10 @@ export async function deleteProfile(profileId: string): Promise<ActionResult> {
     return { error: "No podés borrar tu propia cuenta desde acá." };
   }
   const admin = createAdminClient();
+  const { data: target } = await admin.from("profiles").select("callsign").eq("id", profileId).single();
   const { error } = await admin.auth.admin.deleteUser(profileId);
   if (error) return { error: error.message };
+  await logAudit(staff.id, "delete_profile", null, target?.callsign ?? profileId);
   revalidatePath("/admin/soldados");
   revalidatePath("/equipo");
   return { success: true };
@@ -164,13 +219,56 @@ export async function deleteProfile(profileId: string): Promise<ActionResult> {
 export async function updateCatalogItem(
   table: CatalogTable,
   id: string,
-  patch: { price?: number; in_stock?: boolean; notes?: string | null }
+  patch: {
+    price?: number;
+    in_stock?: boolean;
+    notes?: string | null;
+    min_rank_sort_order?: number | null;
+    image_url?: string | null;
+  }
 ): Promise<ActionResult> {
   await requireCommandStaff();
   if (!CATALOG_TABLES.includes(table)) return { error: "Categoría inválida." };
   const admin = createAdminClient();
   const { error } = await admin.from(table).update(patch).eq("id", id);
   if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/tienda");
+  return { success: true };
+}
+
+/**
+ * Sube la imagen de preview de un ítem del catálogo a Storage (bucket
+ * público de solo-lectura) y guarda la URL en image_url. El archivo ya
+ * llega redimensionado a un PNG cuadrado desde el cliente (canvas).
+ */
+export async function uploadItemImage(formData: FormData): Promise<ActionResult> {
+  await requireCommandStaff();
+  const table = formData.get("table") as CatalogTable;
+  const itemId = formData.get("itemId") as string;
+  const file = formData.get("file") as File | null;
+
+  if (!CATALOG_TABLES.includes(table)) return { error: "Categoría inválida." };
+  if (!file) return { error: "Falta el archivo." };
+  if (file.type !== "image/png") return { error: "La imagen debe ser PNG." };
+  if (file.size > 2 * 1024 * 1024) return { error: "La imagen no puede superar 2MB." };
+
+  const admin = createAdminClient();
+  const path = `${table}/${itemId}-${Date.now()}.png`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error: uploadError } = await admin.storage
+    .from("item-images")
+    .upload(path, buffer, { contentType: "image/png", upsert: true });
+  if (uploadError) return { error: uploadError.message };
+
+  const {
+    data: { publicUrl },
+  } = admin.storage.from("item-images").getPublicUrl(path);
+
+  const { error } = await admin.from(table).update({ image_url: publicUrl }).eq("id", itemId);
+  if (error) return { error: error.message };
+
   revalidatePath("/admin/catalogo");
   revalidatePath("/tienda");
   return { success: true };
@@ -212,6 +310,24 @@ export async function logContract(input: {
   return { success: true };
 }
 
+export async function deleteContract(contractId: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { data: contract } = await admin
+    .from("contracts")
+    .select("transaction_id")
+    .eq("id", contractId)
+    .single();
+  if (contract?.transaction_id) {
+    await admin.from("transactions").delete().eq("id", contract.transaction_id);
+  }
+  const { error } = await admin.from("contracts").delete().eq("id", contractId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/contratos");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 // ============================================================
 // NOTIFICACIONES
 // ============================================================
@@ -220,6 +336,7 @@ export async function sendNotification(input: {
   body: string;
   targetType: NotificationTarget;
   targetId: string | null;
+  pinned?: boolean;
 }): Promise<ActionResult> {
   const staff = await requireCommandStaff();
   if (!input.title.trim()) return { error: "El título es obligatorio." };
@@ -233,9 +350,20 @@ export async function sendNotification(input: {
     body: input.body || null,
     target_type: input.targetType,
     target_id: input.targetType === "all" ? null : input.targetId,
+    pinned: input.pinned ?? false,
     created_by: staff.id,
   });
 
+  if (error) return { error: error.message };
+  revalidatePath("/admin/notificaciones");
+  revalidatePath("/equipo");
+  return { success: true };
+}
+
+export async function deleteNotification(notificationId: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("notifications").delete().eq("id", notificationId);
   if (error) return { error: error.message };
   revalidatePath("/admin/notificaciones");
   return { success: true };
@@ -427,6 +555,25 @@ export async function createSanctionType(input: {
 // ============================================================
 // NÓMINA SEMANAL
 // ============================================================
+export async function updatePayrollSettings(patch: {
+  attendance_threshold: number;
+  attendance_gating_enabled: boolean;
+  auto_run_enabled: boolean;
+}): Promise<ActionResult> {
+  const staff = await requireCommandStaff();
+  if (patch.attendance_threshold < 0 || patch.attendance_threshold > 1) {
+    return { error: "El umbral debe estar entre 0 y 1 (ej: 0.5 = 50%)." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("payroll_settings")
+    .update({ ...patch, updated_by: staff.id, updated_at: new Date().toISOString() })
+    .eq("id", true);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/nomina");
+  return { success: true };
+}
+
 export async function runPayrollNow(): Promise<ActionResult> {
   const staff = await requireCommandStaff();
   const admin = createAdminClient();

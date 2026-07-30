@@ -30,6 +30,7 @@ export default async function TiendaPage() {
         initial={catalog}
         balance={profile.cached_balance}
         canBuy={profile.approved}
+        myRankSortOrder={profile.rank?.sort_order ?? -1}
       />
     </div>
   );

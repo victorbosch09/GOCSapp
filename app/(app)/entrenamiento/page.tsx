@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { getOwnEvaluations, getTrainingMaterials } from "@/lib/data/training";
+import { getQuizzes } from "@/lib/data/quiz";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { QuizList } from "@/components/training/quiz-player";
 
 export const metadata: Metadata = { title: "Entrenamiento — G.O.C.S." };
 
@@ -19,7 +21,11 @@ const RESULT_BADGE: Record<string, string> = {
 };
 
 export default async function EntrenamientoPage() {
-  const [evaluations, materials] = await Promise.all([getOwnEvaluations(), getTrainingMaterials()]);
+  const [evaluations, materials, quizzes] = await Promise.all([
+    getOwnEvaluations(),
+    getTrainingMaterials(),
+    getQuizzes(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -27,6 +33,18 @@ export default async function EntrenamientoPage() {
         <h1 className="font-heading text-2xl">Entrenamiento</h1>
         <p className="text-muted-foreground">Tu hoja de vida y la biblioteca de material de estudio del clan.</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Quizzes</CardTitle>
+          <CardDescription>
+            El resultado se suma automáticamente a tu hoja de vida (≥70% = aprobado).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <QuizList quizzes={quizzes} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

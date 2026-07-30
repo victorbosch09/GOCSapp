@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { getAllProfiles, getRanks } from "@/lib/data/admin";
+import { getAllProfiles, getRanks, getAuditLog } from "@/lib/data/admin";
 import { requireCommandStaff } from "@/lib/data/profile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SoldadosTable } from "@/components/admin/soldados-table";
+import { AuditLog } from "@/components/admin/audit-log";
 
 export const metadata: Metadata = { title: "Soldados — Mando G.O.C.S." };
 
 export default async function AdminSoldadosPage() {
-  const [me, profiles, ranks] = await Promise.all([
+  const [me, profiles, ranks, audit] = await Promise.all([
     requireCommandStaff(),
     getAllProfiles(),
     getRanks(),
+    getAuditLog(),
   ]);
 
   return (
@@ -30,6 +32,7 @@ export default async function AdminSoldadosPage() {
           <SoldadosTable profiles={profiles} ranks={ranks} currentProfileId={me.id} />
         </CardContent>
       </Card>
+      <AuditLog entries={audit} />
     </div>
   );
 }

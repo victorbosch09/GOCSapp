@@ -45,3 +45,12 @@ export const requireCommandStaff = cache(async (): Promise<ProfileWithRank> => {
   }
   return profile;
 });
+
+/** Command staff or instructors — used to gate the training/quiz module only. */
+export const requireInstructorOrStaff = cache(async (): Promise<ProfileWithRank> => {
+  const profile = await getCurrentProfile();
+  if (!profile.is_command_staff && !profile.is_instructor) {
+    redirect("/dashboard");
+  }
+  return profile;
+});

@@ -11,6 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { InventoryCard } from "@/components/dashboard/inventory-card";
+import { ProfileCard } from "@/components/dashboard/profile-card";
+import { TacticalTipCard } from "@/components/dashboard/tactical-tip-card";
+import { OnboardingModal } from "@/components/dashboard/onboarding-modal";
 
 export const metadata: Metadata = { title: "Portal — G.O.C.S." };
 
@@ -37,6 +40,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {!profile.onboarded && <OnboardingModal />}
       <div>
         <h1 className="font-heading text-2xl">Portal de operador</h1>
         <p className="text-muted-foreground">
@@ -44,6 +48,8 @@ export default async function DashboardPage() {
           {profile.squad ? ` · Escuadra ${profile.squad}` : ""}
         </p>
       </div>
+
+      <TacticalTipCard />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -148,6 +154,8 @@ export default async function DashboardPage() {
       </div>
 
       <InventoryCard items={inventory} />
+
+      <ProfileCard bio={profile.bio} avatarUrl={profile.avatar_url} />
 
       <Card>
         <CardHeader>

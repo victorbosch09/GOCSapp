@@ -8,6 +8,7 @@ import {
   updateProfileSquad,
   manualAdjustment,
   setCommandStaff,
+  setInstructor,
   listTransactions,
   updateTransaction,
   deleteTransaction,
@@ -63,6 +64,7 @@ export function SoldadosTable({
           <TableHead className="text-right">Saldo</TableHead>
           <TableHead>Estado</TableHead>
           <TableHead>Mando</TableHead>
+          <TableHead>Instructor</TableHead>
           <TableHead className="text-right">Acciones</TableHead>
         </TableRow>
       </TableHeader>
@@ -147,6 +149,19 @@ function SoldadoRow({
               const result = await setCommandStaff(profile.id, checked);
               if (result?.error) toast.error(result.error);
               else toast.success(checked ? "Mando otorgado." : "Mando revocado.");
+            })
+          }
+        />
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={profile.is_instructor}
+          disabled={pending}
+          onCheckedChange={(checked) =>
+            startTransition(async () => {
+              const result = await setInstructor(profile.id, checked);
+              if (result?.error) toast.error(result.error);
+              else toast.success(checked ? "Instructor otorgado." : "Instructor revocado.");
             })
           }
         />

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCommandStaff } from "@/lib/data/profile";
+import { requireInstructorOrStaff } from "@/lib/data/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SkillResult } from "@/types/database";
 
@@ -12,7 +12,7 @@ export async function createSkill(input: {
   category: string;
   description: string;
 }): Promise<ActionResult> {
-  await requireCommandStaff();
+  await requireInstructorOrStaff();
   if (!input.name.trim()) return { error: "El nombre es obligatorio." };
 
   const admin = createAdminClient();
@@ -42,7 +42,7 @@ export async function evaluateSkill(input: {
   score: number | null;
   notes: string;
 }): Promise<ActionResult> {
-  const staff = await requireCommandStaff();
+  const staff = await requireInstructorOrStaff();
   const admin = createAdminClient();
   const { error } = await admin.from("skill_evaluations").insert({
     profile_id: input.profileId,
@@ -60,7 +60,7 @@ export async function evaluateSkill(input: {
 }
 
 export async function deleteEvaluation(evaluationId: string): Promise<ActionResult> {
-  await requireCommandStaff();
+  await requireInstructorOrStaff();
   const admin = createAdminClient();
   const { error } = await admin.from("skill_evaluations").delete().eq("id", evaluationId);
   if (error) return { error: error.message };
@@ -75,7 +75,7 @@ export async function addTrainingMaterial(input: {
   url: string;
   category: string;
 }): Promise<ActionResult> {
-  const staff = await requireCommandStaff();
+  const staff = await requireInstructorOrStaff();
   if (!input.title.trim()) return { error: "El título es obligatorio." };
 
   const admin = createAdminClient();
@@ -93,7 +93,7 @@ export async function addTrainingMaterial(input: {
 }
 
 export async function deleteTrainingMaterial(materialId: string): Promise<ActionResult> {
-  await requireCommandStaff();
+  await requireInstructorOrStaff();
   const admin = createAdminClient();
   const { error } = await admin.from("training_materials").delete().eq("id", materialId);
   if (error) return { error: error.message };

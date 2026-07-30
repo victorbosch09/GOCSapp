@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { getAllProfiles, getRecentNotifications } from "@/lib/data/admin";
-import { formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { NotificationForm } from "@/components/admin/notification-form";
+import { NotificationList } from "@/components/admin/notification-list";
 
 export const metadata: Metadata = { title: "Notificaciones — Mando G.O.C.S." };
 
@@ -30,19 +29,8 @@ export default async function AdminNotificacionesPage() {
           <CardTitle className="font-heading text-base">Enviadas recientemente</CardTitle>
           <CardDescription>{notifications.length} registros.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {notifications.map((n) => (
-            <div key={n.id} className="rounded-md border border-border/60 p-3 text-sm">
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{n.title}</p>
-                <Badge variant="secondary">
-                  {n.target_type === "all" ? "Todos" : n.target_type === "squad" ? `Escuadra ${n.target_id}` : "Individual"}
-                </Badge>
-              </div>
-              {n.body && <p className="mt-1 text-muted-foreground">{n.body}</p>}
-              <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(n.created_at)}</p>
-            </div>
-          ))}
+        <CardContent>
+          <NotificationList notifications={notifications} />
         </CardContent>
       </Card>
     </div>

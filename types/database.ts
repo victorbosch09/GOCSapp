@@ -27,9 +27,12 @@ export type Profile = {
   squad: string | null;
   rank_id: string | null;
   is_command_staff: boolean;
+  is_instructor: boolean;
   approved: boolean;
   join_date: string;
   avatar_url: string | null;
+  bio: string | null;
+  onboarded: boolean;
   cached_balance: number;
   created_at: string;
 };
@@ -45,6 +48,7 @@ export type CatalogItem = {
   in_stock: boolean;
   image_url: string | null;
   notes: string | null;
+  min_rank_sort_order: number | null;
   created_at: string;
 };
 
@@ -56,6 +60,7 @@ export type Vehicle = {
   in_stock: boolean;
   image_url: string | null;
   notes: string | null;
+  min_rank_sort_order: number | null;
   created_at: string;
 };
 
@@ -116,6 +121,7 @@ export type Notification = {
   body: string | null;
   target_type: NotificationTarget;
   target_id: string | null;
+  pinned: boolean;
   created_by: string | null;
   created_at: string;
 };
@@ -241,12 +247,84 @@ export type TrainingMaterial = {
   created_at: string;
 };
 
+export type PayrollSettings = {
+  id: boolean;
+  attendance_threshold: number;
+  attendance_gating_enabled: boolean;
+  auto_run_enabled: boolean;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export type AdminAuditLog = {
+  id: string;
+  actor_id: string | null;
+  action: string;
+  target_profile_id: string | null;
+  detail: string | null;
+  created_at: string;
+};
+
+export type QuizQuestionOption = { text: string };
+
+export type Quiz = {
+  id: string;
+  skill_id: string | null;
+  title: string;
+  description: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type QuizQuestion = {
+  id: string;
+  quiz_id: string;
+  question: string;
+  options: Json;
+  correct_index: number;
+  sort_order: number;
+};
+
+export type QuizAttempt = {
+  id: string;
+  quiz_id: string;
+  profile_id: string;
+  score: number;
+  total: number;
+  completed_at: string;
+};
+
 export type TeamOverview = {
   total_soldados_activos: number;
   nomina_semanal_total: number;
   gasto_total_armamento: number;
   gasto_total_vehiculos: number;
   proximos_eventos_count: number;
+};
+
+export type SkillCompletionStat = {
+  skill_id: string;
+  skill_name: string;
+  category: string | null;
+  sort_order: number;
+  total_evaluados: number;
+  total_aprobados: number;
+  porcentaje_aprobado: number;
+};
+
+export type DisciplineOverview = {
+  total_sanciones: number;
+  total_recompensas: number;
+  creditos_en_recompensas: number;
+};
+
+export type OperatorRanking = {
+  profile_id: string;
+  callsign: string;
+  squad: string | null;
+  contratos_30d: number;
+  asistencias_30d: number;
+  eventos_oficiales_30d: number;
 };
 
 export type RosterEntry = {
@@ -298,10 +376,18 @@ export type Database = {
       skills: TableDef<Skill, Partial<Skill>>;
       skill_evaluations: TableDef<SkillEvaluation, Partial<SkillEvaluation>>;
       training_materials: TableDef<TrainingMaterial, Partial<TrainingMaterial>>;
+      payroll_settings: TableDef<PayrollSettings, Partial<PayrollSettings>>;
+      admin_audit_log: TableDef<AdminAuditLog, Partial<AdminAuditLog>>;
+      quizzes: TableDef<Quiz, Partial<Quiz>>;
+      quiz_questions: TableDef<QuizQuestion, Partial<QuizQuestion>>;
+      quiz_attempts: TableDef<QuizAttempt, Partial<QuizAttempt>>;
     };
     Views: {
       team_overview: ViewDef<TeamOverview>;
       roster_public: ViewDef<RosterEntry>;
+      skill_completion_stats: ViewDef<SkillCompletionStat>;
+      discipline_overview: ViewDef<DisciplineOverview>;
+      operator_rankings: ViewDef<OperatorRanking>;
     };
     Functions: {
       purchase_item: {
@@ -315,6 +401,10 @@ export type Database = {
       run_weekly_payroll: {
         Args: { p_triggered_by: string | null };
         Returns: PayrollRun;
+      };
+      submit_quiz_attempt: {
+        Args: { p_quiz_id: string; p_answers: number[] };
+        Returns: QuizAttempt;
       };
       log_contract: {
         Args: {

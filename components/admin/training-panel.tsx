@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import type { Profile, Skill, SkillEvaluation, SkillResult, TrainingMaterial } from "@/types/database";
+import type { Skill, SkillEvaluation, SkillResult, TrainingMaterial } from "@/types/database";
 
 const RESULTS: { value: SkillResult; label: string }[] = [
   { value: "aprobado", label: "Aprobado" },
@@ -30,13 +30,15 @@ type EvaluationRow = SkillEvaluation & {
   profile?: { callsign: string } | null;
 };
 
+type RosterEntry = { id: string; callsign: string };
+
 export function TrainingPanel({
   profiles,
   skills,
   evaluations,
   materials,
 }: {
-  profiles: Profile[];
+  profiles: RosterEntry[];
   skills: Skill[];
   evaluations: EvaluationRow[];
   materials: TrainingMaterial[];
@@ -87,7 +89,7 @@ export function TrainingPanel({
   );
 }
 
-function EvaluationForm({ profiles, skills }: { profiles: Profile[]; skills: Skill[] }) {
+function EvaluationForm({ profiles, skills }: { profiles: RosterEntry[]; skills: Skill[] }) {
   const [profileId, setProfileId] = useState("");
   const [skillId, setSkillId] = useState("");
   const [result, setResult] = useState<SkillResult>("aprobado");

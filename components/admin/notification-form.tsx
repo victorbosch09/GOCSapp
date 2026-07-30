@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { NotificationTarget, Profile } from "@/types/database";
 
 export function NotificationForm({ profiles, squads }: { profiles: Profile[]; squads: string[] }) {
@@ -15,11 +16,18 @@ export function NotificationForm({ profiles, squads }: { profiles: Profile[]; sq
   const [body, setBody] = useState("");
   const [targetType, setTargetType] = useState<NotificationTarget>("all");
   const [targetId, setTargetId] = useState("");
+  const [pinned, setPinned] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function submit() {
     startTransition(async () => {
-      const result = await sendNotification({ title, body, targetType, targetId: targetId || null });
+      const result = await sendNotification({
+        title,
+        body,
+        targetType,
+        targetId: targetId || null,
+        pinned,
+      });
       if (result?.error) {
         toast.error(result.error);
       } else {
@@ -27,6 +35,7 @@ export function NotificationForm({ profiles, squads }: { profiles: Profile[]; sq
         setTitle("");
         setBody("");
         setTargetId("");
+        setPinned(false);
       }
     });
   }
@@ -104,6 +113,10 @@ export function NotificationForm({ profiles, squads }: { profiles: Profile[]; sq
           </div>
         )}
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox checked={pinned} onCheckedChange={(v) => setPinned(v === true)} />
+        Fijar como anuncio destacado en /equipo (solo tiene efecto con destinatario &quot;Todos&quot;)
+      </label>
       <Button onClick={submit} disabled={pending} className="self-start">
         {pending ? "Enviando..." : "Enviar notificación"}
       </Button>

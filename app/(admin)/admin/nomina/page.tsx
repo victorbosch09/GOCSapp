@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
-import { getPayrollRuns } from "@/lib/data/admin";
+import { getPayrollRuns, getPayrollSettings } from "@/lib/data/admin";
 import { formatCredits, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PayrollRunButton } from "@/components/admin/payroll-run-button";
+import { PayrollSettingsForm } from "@/components/admin/payroll-settings-form";
 
 export const metadata: Metadata = { title: "Nómina — Mando G.O.C.S." };
 
 export default async function AdminNominaPage() {
-  const runs = await getPayrollRuns();
+  const [runs, settings] = await Promise.all([getPayrollRuns(), getPayrollSettings()]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,6 +23,15 @@ export default async function AdminNominaPage() {
         </div>
         <PayrollRunButton />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Configuración</CardTitle>
+          <CardDescription>Sueldo por rango se edita en /admin/rangos.</CardDescription>
+        </CardHeader>
+        <CardContent>{settings && <PayrollSettingsForm settings={settings} />}</CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="font-heading text-base">Historial de ejecuciones</CardTitle>
