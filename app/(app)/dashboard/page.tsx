@@ -10,10 +10,13 @@ import { nextPaymentDate, formatCredits, formatDate, formatDateTime, rankLabel }
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { InventoryCard } from "@/components/dashboard/inventory-card";
 import { ProfileCard } from "@/components/dashboard/profile-card";
 import { TacticalTipCard } from "@/components/dashboard/tactical-tip-card";
 import { OnboardingModal } from "@/components/dashboard/onboarding-modal";
+import { UpcomingEventsCard } from "@/components/dashboard/upcoming-events-card";
+import { getUpcomingEventsForDashboard } from "@/lib/data/attendance";
 
 export const metadata: Metadata = { title: "Portal — G.O.C.S." };
 
@@ -30,26 +33,36 @@ const TXN_BADGE: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const [profile, transactions, contracts, notifications, inventory] = await Promise.all([
-    getCurrentProfile(),
-    getOwnTransactions(),
-    getOwnContracts(),
-    getOwnNotifications(),
-    getOwnInventory(),
-  ]);
+  const [profile, transactions, contracts, notifications, inventory, upcomingEvents] =
+    await Promise.all([
+      getCurrentProfile(),
+      getOwnTransactions(),
+      getOwnContracts(),
+      getOwnNotifications(),
+      getOwnInventory(),
+      getUpcomingEventsForDashboard(),
+    ]);
 
   return (
     <div className="flex flex-col gap-6">
       {!profile.onboarded && <OnboardingModal />}
-      <div>
-        <h1 className="font-heading text-2xl">Portal de operador</h1>
-        <p className="text-muted-foreground">
-          {profile.callsign}
-          {profile.squad ? ` · Escuadra ${profile.squad}` : ""}
-        </p>
+      <div className="flex items-center gap-3">
+        <Avatar size="lg">
+          {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.callsign} />}
+          <AvatarFallback>{profile.callsign.slice(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div>
+          <h1 className="font-heading text-2xl">Portal de operador</h1>
+          <p className="text-muted-foreground">
+            {profile.callsign}
+            {profile.squad ? ` · Escuadra ${profile.squad}` : ""}
+          </p>
+        </div>
       </div>
 
       <TacticalTipCard />
+
+      <UpcomingEventsCard events={upcomingEvents} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

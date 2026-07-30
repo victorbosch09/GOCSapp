@@ -5,7 +5,7 @@ import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { GocsPatch } from "@/components/brand/logo";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import type { RosterEntry } from "@/types/database";
 
 export function RosterSearch({ roster }: { roster: RosterEntry[] }) {
@@ -43,7 +43,10 @@ export function RosterSearch({ roster }: { roster: RosterEntry[] }) {
           {filtered.map((r) => (
             <TableRow key={r.id}>
               <TableCell className="flex items-center gap-2 font-medium">
-                <GocsPatch size={24} />
+                <Avatar size="sm">
+                  {r.avatar_url && <AvatarImage src={r.avatar_url} alt={r.callsign} />}
+                  <AvatarFallback>{r.callsign.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
                 {r.callsign}
                 {r.is_command_staff && (
                   <Badge variant="secondary" className="text-gocs-red">

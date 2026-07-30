@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { sellItem } from "@/lib/actions/shop";
 import { formatCredits, formatDate } from "@/lib/format";
@@ -35,11 +36,25 @@ function InventoryRow({ item }: { item: InventoryItem }) {
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm">
-      <div className="min-w-0">
-        <p className="truncate font-medium">{item.item_name}</p>
-        <p className="text-xs text-muted-foreground">
-          {item.item_category ?? item.item_table} · Comprado el {formatDate(item.acquired_at)}
-        </p>
+      <div className="flex min-w-0 items-center gap-3">
+        {item.item_image_url && (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted/30">
+            <Image
+              src={item.item_image_url}
+              alt={item.item_name}
+              width={32}
+              height={32}
+              className="object-contain"
+              unoptimized
+            />
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="truncate font-medium">{item.item_name}</p>
+          <p className="text-xs text-muted-foreground">
+            {item.item_category ?? item.item_table} · Comprado el {formatDate(item.acquired_at)}
+          </p>
+        </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <span className="text-muted-foreground">{formatCredits(item.purchase_price)}</span>

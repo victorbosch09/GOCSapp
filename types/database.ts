@@ -189,6 +189,7 @@ export type InventoryItem = {
   item_id: string;
   item_name: string;
   item_category: string | null;
+  item_image_url: string | null;
   purchase_price: number;
   acquired_at: string;
   purchase_transaction_id: string | null;

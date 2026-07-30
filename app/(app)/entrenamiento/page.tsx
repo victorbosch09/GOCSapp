@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getOwnEvaluations, getTrainingMaterials } from "@/lib/data/training";
-import { getQuizzes } from "@/lib/data/quiz";
-import { formatDate } from "@/lib/format";
+import { getQuizzes, getOwnQuizAttempts } from "@/lib/data/quiz";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuizList } from "@/components/training/quiz-player";
@@ -21,10 +21,11 @@ const RESULT_BADGE: Record<string, string> = {
 };
 
 export default async function EntrenamientoPage() {
-  const [evaluations, materials, quizzes] = await Promise.all([
+  const [evaluations, materials, quizzes, attempts] = await Promise.all([
     getOwnEvaluations(),
     getTrainingMaterials(),
     getQuizzes(),
+    getOwnQuizAttempts(),
   ]);
 
   return (
@@ -45,6 +46,39 @@ export default async function EntrenamientoPage() {
           <QuizList quizzes={quizzes} />
         </CardContent>
       </Card>
+
+      {attempts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading text-base">Mis intentos de quiz</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {attempts.map((a) => (
+              <div
+                key={a.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/60 p-2.5 text-sm"
+              >
+                <span className="font-medium">{a.quiz?.title ?? "Quiz"}</span>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    className={
+                      a.score / a.total >= 0.7
+                        ? "bg-emerald-500/15 text-emerald-400"
+                        : "bg-destructive/15 text-destructive"
+                    }
+                    variant="secondary"
+                  >
+                    {a.score}/{a.total}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDateTime(a.completed_at)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

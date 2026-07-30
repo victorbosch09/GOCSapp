@@ -1,6 +1,37 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
+export async function getUpcomingEventsForDashboard(limit = 3) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: events } = await supabase
+    .from("events")
+    .select("*")
+    .in("event_type", ["entrenamiento", "operacion"])
+    .gte("start_at", new Date().toISOString())
+    .order("start_at", { ascending: true })
+    .limit(limit);
+
+  if (!events || events.length === 0 || !user) return [];
+
+  const { data: rsvps } = await supabase
+    .from("event_rsvps")
+    .select("*")
+    .eq("profile_id", user.id)
+    .in(
+      "event_id",
+      events.map((e) => e.id)
+    );
+
+  return events.map((e) => ({
+    ...e,
+    myResponse: rsvps?.find((r) => r.event_id === e.id)?.response ?? null,
+  }));
+}
+
 export async function getAttendanceBoard() {
   const supabase = await createClient();
 
