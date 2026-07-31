@@ -50,6 +50,23 @@ export async function updateProfileRank(profileId: string, rankId: string): Prom
   return { success: true };
 }
 
+export async function updateCallsign(profileId: string, callsign: string): Promise<ActionResult> {
+  const staff = await requireCommandStaff();
+  const trimmed = callsign.trim();
+  if (trimmed.length < 2 || trimmed.length > 40) {
+    return { error: "El callsign debe tener entre 2 y 40 caracteres." };
+  }
+  const admin = createAdminClient();
+  const { data: before } = await admin.from("profiles").select("callsign").eq("id", profileId).single();
+  const { error } = await admin.from("profiles").update({ callsign: trimmed }).eq("id", profileId);
+  if (error) return { error: error.message };
+  await logAudit(staff.id, "rename_callsign", profileId, `${before?.callsign ?? "?"} → ${trimmed}`);
+  revalidatePath("/admin/soldados");
+  revalidatePath("/equipo");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function updateProfileSquad(profileId: string, squad: string): Promise<ActionResult> {
   await requireCommandStaff();
   const admin = createAdminClient();
@@ -237,10 +254,63 @@ export async function updateCatalogItem(
   return { success: true };
 }
 
+export async function createCatalogItem(
+  table: CatalogTable,
+  input: {
+    category: string;
+    name: string;
+    price: number;
+    magPriceStandard: number | null;
+    magPriceSpecial: number | null;
+    capacity: string | null;
+    notes: string | null;
+  }
+): Promise<ActionResult> {
+  await requireCommandStaff();
+  if (!CATALOG_TABLES.includes(table)) return { error: "Categoría inválida." };
+  if (!input.category.trim() || !input.name.trim()) {
+    return { error: "Categoría y nombre son obligatorios." };
+  }
+  if (!Number.isFinite(input.price) || input.price < 0) {
+    return { error: "Precio inválido." };
+  }
+
+  const admin = createAdminClient();
+  const row: Record<string, unknown> = {
+    category: input.category,
+    name: input.name,
+    price: input.price,
+    in_stock: false,
+    notes: input.notes,
+  };
+  if (table !== "vehicles") {
+    row.mag_price_standard = input.magPriceStandard;
+    row.mag_price_special = input.magPriceSpecial;
+    row.capacity = input.capacity;
+  }
+
+  const { error } = await admin.from(table).insert(row);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/tienda");
+  return { success: true };
+}
+
+export async function deleteCatalogItem(table: CatalogTable, id: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  if (!CATALOG_TABLES.includes(table)) return { error: "Categoría inválida." };
+  const admin = createAdminClient();
+  const { error } = await admin.from(table).delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/tienda");
+  return { success: true };
+}
+
 /**
  * Sube la imagen de preview de un ítem del catálogo a Storage (bucket
  * público de solo-lectura) y guarda la URL en image_url. El archivo ya
- * llega redimensionado a un PNG cuadrado desde el cliente (canvas).
+ * llega redimensionado a un PNG rectangular (16:9) desde el cliente (canvas).
  */
 export async function uploadItemImage(formData: FormData): Promise<ActionResult> {
   await requireCommandStaff();

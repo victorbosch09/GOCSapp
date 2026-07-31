@@ -93,7 +93,7 @@ export function CatalogTabs({
             groupByCategory(data[table]).map(([category, items]) => (
               <div key={category}>
                 <h3 className="font-heading mb-3 text-sm text-muted-foreground">{category}</h3>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {items.map((item) => (
                     <ItemCard
                       key={item.id}
@@ -149,7 +149,23 @@ function ItemCard({
   }
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
+      {item.image_url ? (
+        <div className="relative aspect-[16/9] w-full bg-muted/30">
+          <Image
+            src={item.image_url}
+            alt={item.name}
+            fill
+            sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-contain p-3"
+            unoptimized
+          />
+        </div>
+      ) : (
+        <div className="flex aspect-[16/9] w-full items-center justify-center bg-muted/20 text-xs text-muted-foreground">
+          Sin imagen
+        </div>
+      )}
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-sm font-medium leading-snug">{item.name}</CardTitle>
@@ -159,18 +175,6 @@ function ItemCard({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        {item.image_url && (
-          <div className="flex h-24 items-center justify-center rounded-md bg-muted/30">
-            <Image
-              src={item.image_url}
-              alt={item.name}
-              width={80}
-              height={80}
-              className="object-contain"
-              unoptimized
-            />
-          </div>
-        )}
         <p className="font-heading text-lg text-gocs-red">{formatCredits(item.price)}</p>
         {capacity && <p className="text-xs text-muted-foreground">{capacity}</p>}
         {(magStd || magSpecial) && (

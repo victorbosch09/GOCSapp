@@ -3,13 +3,29 @@
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { updateCatalogItem, uploadItemImage } from "@/lib/actions/admin";
-import { resizeToSquarePng } from "@/lib/resize-image";
+import {
+  updateCatalogItem,
+  uploadItemImage,
+  createCatalogItem,
+  deleteCatalogItem,
+} from "@/lib/actions/admin";
+import { resizeToRectPng } from "@/lib/resize-image";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { CatalogItem, Rank, Vehicle } from "@/types/database";
 
 type Table_ = "weapons" | "equipment" | "accessories" | "vehicles";
@@ -37,34 +53,146 @@ export function CatalogEditor({
           </TabsTrigger>
         ))}
       </TabsList>
-      {TABS.map(({ table }) => (
-        <TabsContent key={table} value={table}>
+      {TABS.map(({ table, label }) => (
+        <TabsContent key={table} value={table} className="flex flex-col gap-4">
+          <NewItemDialog table={table} label={label} />
           {data[table].length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Sin ítems cargados. Se completa progresivamente desde acá.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">Imagen</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="w-28">Precio (cr)</TableHead>
-                  <TableHead className="w-20">En stock</TableHead>
-                  <TableHead className="w-44">Rango mínimo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data[table].map((item) => (
-                  <ItemRow key={item.id} item={item} table={table} ranks={ranks} />
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-24">Imagen</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead className="w-28">Precio (cr)</TableHead>
+                    <TableHead className="w-20">En stock</TableHead>
+                    <TableHead className="w-44">Rango mínimo</TableHead>
+                    <TableHead className="w-20">Borrar</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data[table].map((item) => (
+                    <ItemRow key={item.id} item={item} table={table} ranks={ranks} />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </TabsContent>
       ))}
     </Tabs>
+  );
+}
+
+function NewItemDialog({ table, label }: { table: Table_; label: string }) {
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("");
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [magStd, setMagStd] = useState("");
+  const [magSpecial, setMagSpecial] = useState("");
+  const [capacity, setCapacity] = useState("");
+  const [notes, setNotes] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function reset() {
+    setCategory("");
+    setName("");
+    setPrice("");
+    setMagStd("");
+    setMagSpecial("");
+    setCapacity("");
+    setNotes("");
+  }
+
+  function submit() {
+    const parsedPrice = Number(price);
+    if (!category.trim() || !name.trim() || Number.isNaN(parsedPrice)) {
+      toast.error("Completá al menos categoría, nombre y precio.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await createCatalogItem(table, {
+        category,
+        name,
+        price: parsedPrice,
+        magPriceStandard: magStd ? Number(magStd) : null,
+        magPriceSpecial: magSpecial ? Number(magSpecial) : null,
+        capacity: capacity || null,
+        notes: notes || null,
+      });
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Ítem agregado (queda sin stock hasta que lo actives).");
+        reset();
+        setOpen(false);
+      }
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="self-start">
+          + Nuevo ítem en {label}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nuevo ítem — {label}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label className="mb-1.5 block text-xs">Categoría</Label>
+              <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Fusiles" />
+            </div>
+            <div>
+              <Label className="mb-1.5 block text-xs">Nombre</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <Label className="mb-1.5 block text-xs">Precio (cr)</Label>
+              <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
+            </div>
+            {table !== "vehicles" && (
+              <>
+                <div>
+                  <Label className="mb-1.5 block text-xs">Cargador estándar</Label>
+                  <Input type="number" value={magStd} onChange={(e) => setMagStd(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block text-xs">Cargador especial</Label>
+                  <Input type="number" value={magSpecial} onChange={(e) => setMagSpecial(e.target.value)} />
+                </div>
+              </>
+            )}
+          </div>
+          {table !== "vehicles" && (
+            <div>
+              <Label className="mb-1.5 block text-xs">Capacidad (ej: 30 car.)</Label>
+              <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+            </div>
+          )}
+          <div>
+            <Label className="mb-1.5 block text-xs">Notas (opcional)</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={submit} disabled={pending}>
+            {pending ? "Agregando..." : "Agregar al catálogo"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -73,7 +201,7 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
   const [inStock, setInStock] = useState(item.in_stock);
   const [imageUrl, setImageUrl] = useState(item.image_url);
   const [uploading, setUploading] = useState(false);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function save(patch: { price?: number; in_stock?: boolean; min_rank_sort_order?: number | null }) {
@@ -86,7 +214,7 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
   async function handleFile(file: File) {
     setUploading(true);
     try {
-      const resized = await resizeToSquarePng(file, 512);
+      const resized = await resizeToRectPng(file, 800, 450);
       const formData = new FormData();
       formData.set("table", table);
       formData.set("itemId", item.id);
@@ -110,13 +238,20 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
       <TableCell>
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-border/60 bg-muted/40 text-xs text-muted-foreground hover:border-gocs-red"
+          className="flex aspect-[16/9] w-20 items-center justify-center overflow-hidden rounded-md border border-border/60 bg-muted/40 text-xs text-muted-foreground hover:border-gocs-red"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          title="Subir imagen (PNG, fondo transparente)"
+          title="Subir imagen (PNG, fondo transparente, se recorta a 16:9)"
         >
           {imageUrl ? (
-            <Image src={imageUrl} alt={item.name} width={40} height={40} className="object-contain" unoptimized />
+            <Image
+              src={imageUrl}
+              alt={item.name}
+              width={80}
+              height={45}
+              className="object-contain"
+              unoptimized
+            />
           ) : uploading ? (
             "..."
           ) : (
@@ -175,6 +310,22 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
             ))}
           </SelectContent>
         </Select>
+      </TableCell>
+      <TableCell>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          onClick={() => {
+            if (!confirm(`¿Borrar "${item.name}" del catálogo?`)) return;
+            startTransition(async () => {
+              const result = await deleteCatalogItem(table, item.id);
+              if (result?.error) toast.error(result.error);
+            });
+          }}
+        >
+          Borrar
+        </Button>
       </TableCell>
     </TableRow>
   );

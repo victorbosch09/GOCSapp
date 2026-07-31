@@ -1,24 +1,24 @@
 /**
- * Resizes/pads an image file to a square transparent PNG of `size` px,
+ * Resizes/pads an image file to a rectangular (16:9) transparent PNG,
  * fitting the original inside (contain) and centering it. Runs entirely in
  * the browser via canvas — no server-side image processing needed.
  */
-export async function resizeToSquarePng(file: File, size = 512): Promise<File> {
+export async function resizeToRectPng(file: File, width = 800, height = 450): Promise<File> {
   const bitmap = await createImageBitmap(file);
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No se pudo procesar la imagen en este navegador.");
 
-  const scale = Math.min(size / bitmap.width, size / bitmap.height);
-  const width = bitmap.width * scale;
-  const height = bitmap.height * scale;
-  const x = (size - width) / 2;
-  const y = (size - height) / 2;
+  const scale = Math.min(width / bitmap.width, height / bitmap.height);
+  const drawWidth = bitmap.width * scale;
+  const drawHeight = bitmap.height * scale;
+  const x = (width - drawWidth) / 2;
+  const y = (height - drawHeight) / 2;
 
-  ctx.clearRect(0, 0, size, size);
-  ctx.drawImage(bitmap, x, y, width, height);
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(bitmap, x, y, drawWidth, drawHeight);
 
   const blob: Blob = await new Promise((resolve, reject) => {
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No se pudo generar el PNG."))), "image/png");

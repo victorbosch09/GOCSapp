@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   approveProfile,
+  updateCallsign,
   updateProfileRank,
   updateProfileSquad,
   manualAdjustment,
@@ -115,10 +116,33 @@ function SoldadoRow({
 }) {
   const [pending, startTransition] = useTransition();
   const [squad, setSquad] = useState(profile.squad ?? "");
+  const [callsign, setCallsign] = useState(profile.callsign);
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{profile.callsign}</TableCell>
+      <TableCell className="font-medium">
+        <Input
+          value={callsign}
+          onChange={(e) => setCallsign(e.target.value)}
+          onBlur={() => {
+            const trimmed = callsign.trim();
+            if (trimmed && trimmed !== profile.callsign) {
+              startTransition(async () => {
+                const result = await updateCallsign(profile.id, trimmed);
+                if (result?.error) {
+                  toast.error(result.error);
+                  setCallsign(profile.callsign);
+                } else {
+                  toast.success("Callsign actualizado.");
+                }
+              });
+            } else if (!trimmed) {
+              setCallsign(profile.callsign);
+            }
+          }}
+          className="h-8 w-36"
+        />
+      </TableCell>
       <TableCell>
         <Select
           defaultValue={profile.rank_id ?? undefined}
