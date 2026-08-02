@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireInstructorOrStaff } from "@/lib/data/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import type { QuizDifficulty } from "@/types/database";
 
 type ActionResult = { error?: string; success?: true };
 
@@ -11,6 +12,7 @@ export async function createQuiz(input: {
   title: string;
   description: string;
   skillId: string | null;
+  difficulty: QuizDifficulty;
   questions: { question: string; options: string[]; correctIndex: number }[];
 }): Promise<ActionResult> {
   const staff = await requireInstructorOrStaff();
@@ -29,6 +31,7 @@ export async function createQuiz(input: {
       title: input.title,
       description: input.description || null,
       skill_id: input.skillId,
+      difficulty: input.difficulty,
       created_by: staff.id,
     })
     .select()

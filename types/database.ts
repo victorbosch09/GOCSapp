@@ -268,11 +268,14 @@ export type AdminAuditLog = {
 
 export type QuizQuestionOption = { text: string };
 
+export type QuizDifficulty = "facil" | "media" | "dificil";
+
 export type Quiz = {
   id: string;
   skill_id: string | null;
   title: string;
   description: string | null;
+  difficulty: QuizDifficulty;
   created_by: string | null;
   created_at: string;
 };
@@ -293,6 +296,12 @@ export type QuizAttempt = {
   score: number;
   total: number;
   completed_at: string;
+};
+
+export type QuizAttemptResult = QuizAttempt & {
+  passed: boolean;
+  bonus_awarded: boolean;
+  bonus_amount: number;
 };
 
 export type TeamOverview = {
@@ -405,7 +414,7 @@ export type Database = {
       };
       submit_quiz_attempt: {
         Args: { p_quiz_id: string; p_answers: number[] };
-        Returns: QuizAttempt;
+        Returns: QuizAttemptResult;
       };
       log_contract: {
         Args: {

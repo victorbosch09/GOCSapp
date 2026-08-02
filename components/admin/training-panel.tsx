@@ -280,11 +280,25 @@ function MaterialsPanel({ materials }: { materials: TrainingMaterial[] }) {
         <Input placeholder="URL" value={url} onChange={(e) => setUrl(e.target.value)} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input
-          placeholder="Categoría (opcional)"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        />
+        <div className="flex flex-col gap-1.5">
+          <Input
+            placeholder="Categoría (opcional)"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {["Módulo", "Examen", "Video", "Manual", "Curso"].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(c)}
+                className="rounded-full border border-border/60 px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:border-gocs-red hover:text-foreground"
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
         <Input
           placeholder="Descripción (opcional)"
           value={description}

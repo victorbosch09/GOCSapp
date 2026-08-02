@@ -9,9 +9,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import type { Quiz, QuizQuestion } from "@/types/database";
+import { formatCredits } from "@/lib/format";
+import type { Quiz, QuizDifficulty, QuizQuestion } from "@/types/database";
 
 type QuizWithMeta = Quiz & { skill: { name: string } | null; questions: { id: string }[] };
+
+const DIFFICULTY_LABEL: Record<QuizDifficulty, string> = {
+  facil: "Fácil",
+  media: "Media",
+  dificil: "Difícil",
+};
+
+const DIFFICULTY_BADGE: Record<QuizDifficulty, string> = {
+  facil: "bg-emerald-500/15 text-emerald-400",
+  media: "bg-amber-500/15 text-amber-400",
+  dificil: "bg-destructive/15 text-destructive",
+};
 
 export function QuizList({ quizzes }: { quizzes: QuizWithMeta[] }) {
   const [activeQuiz, setActiveQuiz] = useState<QuizWithMeta | null>(null);
@@ -28,10 +41,15 @@ export function QuizList({ quizzes }: { quizzes: QuizWithMeta[] }) {
             <div>
               <div className="flex items-center gap-2">
                 <p className="font-medium">{q.title}</p>
+                <Badge className={DIFFICULTY_BADGE[q.difficulty]} variant="secondary">
+                  {DIFFICULTY_LABEL[q.difficulty]}
+                </Badge>
                 {q.skill?.name && <Badge variant="secondary">{q.skill.name}</Badge>}
               </div>
               {q.description && <p className="text-sm text-muted-foreground">{q.description}</p>}
-              <p className="text-xs text-muted-foreground">{q.questions.length} preguntas</p>
+              <p className="text-xs text-muted-foreground">
+                {q.questions.length} preguntas · Aprobar (≥70%) da +{formatCredits(1000)}
+              </p>
             </div>
             <Button size="sm" onClick={() => setActiveQuiz(q)}>
               Hacer quiz
@@ -61,7 +79,13 @@ function QuizPlayerModal({
 }) {
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [result, setResult] = useState<{ score: number; total: number } | null>(null);
+  const [result, setResult] = useState<{
+    score: number;
+    total: number;
+    passed: boolean;
+    bonusAwarded: boolean;
+    bonusAmount: number;
+  } | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -84,7 +108,16 @@ function QuizPlayerModal({
       if (res?.error) {
         toast.error(res.error);
       } else if (res?.data) {
-        setResult({ score: res.data.score, total: res.data.total });
+        setResult({
+          score: res.data.score,
+          total: res.data.total,
+          passed: res.data.passed,
+          bonusAwarded: res.data.bonus_awarded,
+          bonusAmount: res.data.bonus_amount,
+        });
+        if (res.data.bonus_awarded) {
+          toast.success(`¡Aprobado! +${res.data.bonus_amount} créditos acreditados.`);
+        }
       }
     });
   }
@@ -98,12 +131,24 @@ function QuizPlayerModal({
 
         {result ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <p className="text-4xl">{result.passed ? "🏅" : "📋"}</p>
             <p className="font-heading text-3xl text-gocs-red">
               {result.score}/{result.total}
             </p>
             <p className="text-muted-foreground">
-              {Math.round((result.score / result.total) * 100)}% de aciertos
+              {Math.round((result.score / result.total) * 100)}% de aciertos —{" "}
+              {result.passed ? "Aprobado" : "No aprobado"}
             </p>
+            {result.bonusAwarded && (
+              <p className="font-heading text-lg text-emerald-400">
+                +{formatCredits(result.bonusAmount)} acreditados
+              </p>
+            )}
+            {result.passed && !result.bonusAwarded && (
+              <p className="text-xs text-muted-foreground">
+                Ya habías aprobado este quiz antes — el bono solo se otorga la primera vez.
+              </p>
+            )}
             <Button onClick={onClose}>Cerrar</Button>
           </div>
         ) : questions === null ? (

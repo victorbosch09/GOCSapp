@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { getOwnEvaluations, getTrainingMaterials } from "@/lib/data/training";
+import { getOwnEvaluations, getTrainingMaterials, getOwnTrainingStats } from "@/lib/data/training";
 import { getQuizzes, getOwnQuizAttempts } from "@/lib/data/quiz";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuizList } from "@/components/training/quiz-player";
+import { TrainingStatsCard } from "@/components/training/stats-card";
 
 export const metadata: Metadata = { title: "Entrenamiento — G.O.C.S." };
 
@@ -21,7 +22,8 @@ const RESULT_BADGE: Record<string, string> = {
 };
 
 export default async function EntrenamientoPage() {
-  const [evaluations, materials, quizzes, attempts] = await Promise.all([
+  const [stats, evaluations, materials, quizzes, attempts] = await Promise.all([
+    getOwnTrainingStats(),
     getOwnEvaluations(),
     getTrainingMaterials(),
     getQuizzes(),
@@ -32,58 +34,67 @@ export default async function EntrenamientoPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl">Entrenamiento</h1>
-        <p className="text-muted-foreground">Tu hoja de vida y la biblioteca de material de estudio del clan.</p>
+        <p className="text-muted-foreground">
+          Tu hoja de vida, tus quizzes y la biblioteca de material de estudio del clan.
+        </p>
+      </div>
+
+      <TrainingStatsCard stats={stats} />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading text-base">🎯 Quizzes disponibles</CardTitle>
+            <CardDescription>
+              Aprobar (≥70%) por primera vez te da un bono automático de créditos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <QuizList quizzes={quizzes} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading text-base">📝 Mis intentos</CardTitle>
+            <CardDescription>Historial de todos tus quizzes rendidos.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {attempts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Todavía no rendiste ningún quiz.</p>
+            ) : (
+              attempts.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-border/60 p-2.5 text-sm"
+                >
+                  <span className="font-medium">{a.quiz?.title ?? "Quiz"}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      className={
+                        a.score / a.total >= 0.7
+                          ? "bg-emerald-500/15 text-emerald-400"
+                          : "bg-destructive/15 text-destructive"
+                      }
+                      variant="secondary"
+                    >
+                      {a.score}/{a.total}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDateTime(a.completed_at)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Quizzes</CardTitle>
-          <CardDescription>
-            El resultado se suma automáticamente a tu hoja de vida (≥70% = aprobado).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <QuizList quizzes={quizzes} />
-        </CardContent>
-      </Card>
-
-      {attempts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-heading text-base">Mis intentos de quiz</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {attempts.map((a) => (
-              <div
-                key={a.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-border/60 p-2.5 text-sm"
-              >
-                <span className="font-medium">{a.quiz?.title ?? "Quiz"}</span>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    className={
-                      a.score / a.total >= 0.7
-                        ? "bg-emerald-500/15 text-emerald-400"
-                        : "bg-destructive/15 text-destructive"
-                    }
-                    variant="secondary"
-                  >
-                    {a.score}/{a.total}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDateTime(a.completed_at)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-base">Mi hoja de vida</CardTitle>
-          <CardDescription>Evaluaciones cargadas por instructores y mando.</CardDescription>
+          <CardTitle className="font-heading text-base">📖 Mi hoja de vida</CardTitle>
+          <CardDescription>Evaluaciones cargadas por instructores y mando, por módulo.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {evaluations.length === 0 ? (
@@ -110,8 +121,8 @@ export default async function EntrenamientoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-heading text-base">Material de estudio</CardTitle>
-          <CardDescription>Biblioteca compartida del clan.</CardDescription>
+          <CardTitle className="font-heading text-base">📚 Material de estudio</CardTitle>
+          <CardDescription>Biblioteca compartida del clan — cursos, manuales, exámenes.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {materials.length === 0 ? (

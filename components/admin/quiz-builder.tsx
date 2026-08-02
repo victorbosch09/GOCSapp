@@ -9,10 +9,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Quiz, Skill } from "@/types/database";
+import type { Quiz, QuizDifficulty, Skill } from "@/types/database";
 
 type DraftQuestion = { question: string; options: string[]; correctIndex: number };
 type QuizWithMeta = Quiz & { skill: { name: string } | null; questions: { id: string }[] };
+
+const DIFFICULTIES: { value: QuizDifficulty; label: string }[] = [
+  { value: "facil", label: "Fácil" },
+  { value: "media", label: "Media" },
+  { value: "dificil", label: "Difícil" },
+];
+
+const DIFFICULTY_BADGE: Record<QuizDifficulty, string> = {
+  facil: "bg-emerald-500/15 text-emerald-400",
+  media: "bg-amber-500/15 text-amber-400",
+  dificil: "bg-destructive/15 text-destructive",
+};
 
 function emptyQuestion(): DraftQuestion {
   return { question: "", options: ["", "", "", ""], correctIndex: 0 };
@@ -22,6 +34,7 @@ export function QuizBuilder({ skills, quizzes }: { skills: Skill[]; quizzes: Qui
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [skillId, setSkillId] = useState<string>("none");
+  const [difficulty, setDifficulty] = useState<QuizDifficulty>("media");
   const [questions, setQuestions] = useState<DraftQuestion[]>([emptyQuestion()]);
   const [pending, startTransition] = useTransition();
 
@@ -43,15 +56,17 @@ export function QuizBuilder({ skills, quizzes }: { skills: Skill[]; quizzes: Qui
         title,
         description,
         skillId: skillId === "none" ? null : skillId,
+        difficulty,
         questions,
       });
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Quiz creado.");
+        toast.success("Quiz creado. Si alguien lo aprueba (≥70%) por primera vez, gana 1000cr automáticos.");
         setTitle("");
         setDescription("");
         setSkillId("none");
+        setDifficulty("media");
         setQuestions([emptyQuestion()]);
       }
     });
@@ -81,6 +96,21 @@ export function QuizBuilder({ skills, quizzes }: { skills: Skill[]; quizzes: Qui
               </SelectContent>
             </Select>
           </div>
+        </div>
+        <div>
+          <Label className="mb-2 block">Dificultad</Label>
+          <Select value={difficulty} onValueChange={(v) => setDifficulty(v as QuizDifficulty)}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DIFFICULTIES.map((d) => (
+                <SelectItem key={d.value} value={d.value}>
+                  {d.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label className="mb-2 block">Descripción (opcional)</Label>
@@ -159,6 +189,9 @@ function QuizRow({ quiz }: { quiz: QuizWithMeta }) {
       <div>
         <div className="flex items-center gap-2">
           <span className="font-medium">{quiz.title}</span>
+          <Badge className={DIFFICULTY_BADGE[quiz.difficulty]} variant="secondary">
+            {DIFFICULTIES.find((d) => d.value === quiz.difficulty)?.label}
+          </Badge>
           {quiz.skill?.name && <Badge variant="secondary">{quiz.skill.name}</Badge>}
         </div>
         <p className="text-xs text-muted-foreground">{quiz.questions.length} preguntas</p>
