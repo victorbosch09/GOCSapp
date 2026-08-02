@@ -10,9 +10,19 @@ export async function getSkills() {
 
 export async function getOwnEvaluations() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Explicit profile_id filter: RLS also grants command staff/instructors
+  // broad read access to this table for admin views, so an unfiltered
+  // query here would return every soldier's evaluations, not just the
+  // caller's own.
   const { data } = await supabase
     .from("skill_evaluations")
     .select("*, skill:skills(name, category)")
+    .eq("profile_id", user.id)
     .order("evaluated_at", { ascending: false });
   return (data ?? []) as unknown as (SkillEvaluation & {
     skill: { name: string; category: string | null } | null;

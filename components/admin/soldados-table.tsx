@@ -14,8 +14,9 @@ import {
   updateTransaction,
   deleteTransaction,
   deleteProfile,
+  listInventory,
 } from "@/lib/actions/admin";
-import { formatCredits, formatDateTime } from "@/lib/format";
+import { formatCredits, formatDate, formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { downloadCsv } from "@/lib/csv";
-import type { Profile, Rank, Transaction, TransactionType } from "@/types/database";
+import type { InventoryItem, Profile, Rank, Transaction, TransactionType } from "@/types/database";
 
 type ProfileRow = Profile & { rank: Rank | null };
 
@@ -235,6 +236,7 @@ function SoldadoRow({
         )}
         <AdjustmentDialog profileId={profile.id} callsign={profile.callsign} />
         <LedgerDialog profileId={profile.id} callsign={profile.callsign} />
+        <InventoryDialog profileId={profile.id} callsign={profile.callsign} />
         {profile.id !== currentProfileId && (
           <Button
             size="sm"
@@ -361,6 +363,61 @@ function LedgerDialog({ profileId, callsign }: { profileId: string; callsign: st
                 txn={t}
                 onChanged={() => startTransition(refresh)}
               />
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function InventoryDialog({ profileId, callsign }: { profileId: string; callsign: string }) {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<InventoryItem[] | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      listInventory(profileId).then(setItems);
+    }
+  }, [open, profileId]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          Inventario
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Inventario de {callsign}</DialogTitle>
+        </DialogHeader>
+        <p className="-mt-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+          Este es el inventario de <strong>{callsign}</strong>, no el tuyo. Tu propio inventario
+          siempre está en tu Portal (/dashboard), separado de esta vista de mando.
+        </p>
+        {items === null ? (
+          <p className="text-sm text-muted-foreground">Cargando...</p>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sin ítems comprados todavía.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{item.item_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.item_category ?? item.item_table} · Comprado el{" "}
+                    {formatDate(item.acquired_at)}
+                  </p>
+                </div>
+                <span className="shrink-0 text-muted-foreground">
+                  {formatCredits(item.purchase_price)}
+                </span>
+              </div>
             ))}
           </div>
         )}

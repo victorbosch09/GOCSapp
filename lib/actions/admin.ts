@@ -172,6 +172,18 @@ export async function listTransactions(profileId: string) {
   return data ?? [];
 }
 
+/** Inventario de OTRO operador — para mando. Nunca usar esto para "mi inventario". */
+export async function listInventory(profileId: string) {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("inventory")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("acquired_at", { ascending: false });
+  return data ?? [];
+}
+
 export async function deleteTransaction(transactionId: string): Promise<ActionResult> {
   const staff = await requireCommandStaff();
   const admin = createAdminClient();

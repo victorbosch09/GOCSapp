@@ -27,9 +27,17 @@ export async function getQuizWithQuestions(quizId: string) {
 
 export async function getOwnQuizAttempts() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Explicit profile_id filter — see note in lib/data/dashboard.ts: RLS
+  // also grants command staff/instructors broad read here for admin views.
   const { data } = await supabase
     .from("quiz_attempts")
     .select("*, quiz:quizzes(title)")
+    .eq("profile_id", user.id)
     .order("completed_at", { ascending: false });
   return (data ?? []) as unknown as (import("@/types/database").QuizAttempt & {
     quiz: { title: string } | null;
