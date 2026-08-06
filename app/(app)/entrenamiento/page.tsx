@@ -50,7 +50,7 @@ export default async function EntrenamientoPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <QuizList quizzes={quizzes} />
+            <QuizList quizzes={quizzes} attempts={attempts} />
           </CardContent>
         </Card>
 

@@ -26,13 +26,20 @@ export function ContractForm({
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
 
-  const total = useMemo(
+  const baseTotal = useMemo(
     () =>
       bonusTypes
         .filter((b) => selectedBonuses.has(b.label))
         .reduce((sum, b) => sum + b.amount, 0),
     [bonusTypes, selectedBonuses]
   );
+
+  const riskPct = useMemo(() => {
+    if (!riskLevel) return 0;
+    return riskLevels.find((r) => String(r.level) === riskLevel)?.percentage ?? 0;
+  }, [riskLevel, riskLevels]);
+
+  const total = useMemo(() => Math.round(baseTotal * (1 + riskPct)), [baseTotal, riskPct]);
 
   function toggle(set: Set<string>, setSet: (s: Set<string>) => void, value: string) {
     const next = new Set(set);
@@ -79,7 +86,7 @@ export function ContractForm({
       </div>
 
       <div>
-        <Label className="mb-2 block">Nivel de riesgo (informativo)</Label>
+        <Label className="mb-2 block">Nivel de riesgo (aplica % extra sobre el total de bonos)</Label>
         <Select value={riskLevel} onValueChange={setRiskLevel}>
           <SelectTrigger className="w-56">
             <SelectValue placeholder="Sin especificar" />
@@ -117,6 +124,7 @@ export function ContractForm({
       <div className="flex items-center justify-between rounded-md border border-border/60 p-3">
         <span className="text-sm text-muted-foreground">
           Total por soldado seleccionado ({selectedProfiles.size})
+          {riskPct > 0 && ` — base ${formatCredits(baseTotal)} + ${(riskPct * 100).toFixed(0)}% riesgo`}
         </span>
         <span className="font-heading text-lg text-gocs-red">{formatCredits(total)}</span>
       </div>

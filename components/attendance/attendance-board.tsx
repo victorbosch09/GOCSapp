@@ -1,12 +1,6 @@
-"use client";
-
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
-import { rsvpToEvent } from "@/lib/actions/attendance";
 import { formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Event, EventAttendance, EventRsvp, RsvpResponse } from "@/types/database";
 
 const RSVP_LABEL: Record<RsvpResponse, string> = {
@@ -74,7 +68,6 @@ function EventAttendanceCard({
   currentProfileId: string;
 }) {
   const isUpcoming = new Date(event.start_at) >= new Date();
-  const myRsvp = rsvps.find((r) => r.profile_id === currentProfileId);
 
   return (
     <Card>
@@ -89,20 +82,13 @@ function EventAttendanceCard({
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {isUpcoming && (
-          <div className="flex items-center gap-3 rounded-md border border-border/60 p-3">
-            <span className="text-sm text-muted-foreground">Tu respuesta en Discord:</span>
-            <RsvpSelector eventId={event.id} value={myRsvp?.response} />
-          </div>
-        )}
-
+      <CardContent>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-muted-foreground">
                 <th className="pb-2 font-normal">Operador</th>
-                <th className="pb-2 font-normal">RSVP Discord</th>
+                <th className="pb-2 font-normal">Marcó en Discord</th>
                 <th className="pb-2 font-normal">Asistencia real</th>
               </tr>
             </thead>
@@ -111,15 +97,23 @@ function EventAttendanceCard({
                 const rsvp = rsvps.find((x) => x.profile_id === r.id);
                 const real = attendance.find((x) => x.profile_id === r.id);
                 return (
-                  <tr key={r.id} className="border-t border-border/40">
-                    <td className="py-1.5 font-medium">{r.callsign}</td>
+                  <tr
+                    key={r.id}
+                    className={`border-t border-border/40 ${r.id === currentProfileId ? "bg-primary/5" : ""}`}
+                  >
+                    <td className="py-1.5 font-medium">
+                      {r.callsign}
+                      {r.id === currentProfileId && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">(vos)</span>
+                      )}
+                    </td>
                     <td className="py-1.5">
                       {rsvp ? (
                         <Badge className={RSVP_BADGE[rsvp.response]} variant="secondary">
                           {RSVP_LABEL[rsvp.response]}
                         </Badge>
                       ) : (
-                        <span className="text-muted-foreground">Sin responder</span>
+                        <span className="text-muted-foreground">Sin marcar</span>
                       )}
                     </td>
                     <td className="py-1.5">
@@ -150,34 +144,5 @@ function EventAttendanceCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function RsvpSelector({ eventId, value }: { eventId: string; value?: RsvpResponse }) {
-  const [pending, startTransition] = useTransition();
-  const [current, setCurrent] = useState(value);
-
-  return (
-    <Select
-      value={current}
-      disabled={pending}
-      onValueChange={(v) => {
-        const response = v as RsvpResponse;
-        setCurrent(response);
-        startTransition(async () => {
-          const result = await rsvpToEvent(eventId, response);
-          if (result?.error) toast.error(result.error);
-        });
-      }}
-    >
-      <SelectTrigger size="sm" className="w-40">
-        <SelectValue placeholder="Responder" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="asiste">Asiste</SelectItem>
-        <SelectItem value="tal_vez">Tal vez</SelectItem>
-        <SelectItem value="no_asiste">No asiste</SelectItem>
-      </SelectContent>
-    </Select>
   );
 }

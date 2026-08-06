@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   approveProfile,
@@ -234,6 +235,9 @@ function SoldadoRow({
             Aprobar
           </Button>
         )}
+        <Button size="sm" variant="outline" asChild>
+          <Link href={`/admin/soldados/${profile.id}`}>Ver portal</Link>
+        </Button>
         <AdjustmentDialog profileId={profile.id} callsign={profile.callsign} />
         <LedgerDialog profileId={profile.id} callsign={profile.callsign} />
         <InventoryDialog profileId={profile.id} callsign={profile.callsign} />

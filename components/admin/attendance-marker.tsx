@@ -1,21 +1,26 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { markAttendance } from "@/lib/actions/attendance";
+import { markAttendance, setDiscordRsvp } from "@/lib/actions/attendance";
 import { formatDateTime } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Event, EventAttendance, EventRsvp, RsvpResponse } from "@/types/database";
 
-const RSVP_LABEL: Record<RsvpResponse, string> = {
+const RSVP_LABEL: Record<string, string> = {
+  sin_marcar: "Sin marcar",
   asiste: "Asiste",
   tal_vez: "Tal vez",
   no_asiste: "No asiste",
 };
 
 type RosterEntry = { id: string; callsign: string };
+type Key = string;
+
+function key(eventId: string, profileId: string): Key {
+  return `${eventId}:${profileId}`;
+}
 
 export function AttendanceMarker({
   events,
@@ -28,14 +33,15 @@ export function AttendanceMarker({
   attendance: EventAttendance[];
   roster: RosterEntry[];
 }) {
-  const [eventId, setEventId] = useState(events[0]?.id ?? "");
-  const [localAttendance, setLocalAttendance] = useState(attendance);
-
-  const selectedEvent = events.find((e) => e.id === eventId);
-  const eventRsvps = rsvps.filter((r) => r.event_id === eventId);
-  const eventAttendance = localAttendance.filter((a) => a.event_id === eventId);
-
-  const attendedCount = eventAttendance.filter((a) => a.attended).length;
+  // Cada evento es una sección independiente y siempre visible — nunca
+  // depende de una selección compartida que se pueda perder de vista
+  // cuando hay varios eventos activos a la vez.
+  const [rsvpMap, setRsvpMap] = useState<Map<Key, RsvpResponse>>(
+    () => new Map(rsvps.map((r) => [key(r.event_id, r.profile_id), r.response]))
+  );
+  const [attendanceMap, setAttendanceMap] = useState<Map<Key, boolean>>(
+    () => new Map(attendance.map((a) => [key(a.event_id, a.profile_id), a.attended]))
+  );
 
   if (events.length === 0) {
     return <p className="text-sm text-muted-foreground">No hay entrenamientos ni operaciones cargados.</p>;
@@ -43,66 +49,60 @@ export function AttendanceMarker({
 
   return (
     <div className="flex flex-col gap-4">
-      <Select value={eventId} onValueChange={setEventId}>
-        <SelectTrigger className="w-full sm:w-96">
-          <SelectValue placeholder="Elegí un evento" />
-        </SelectTrigger>
-        <SelectContent>
-          {events.map((e) => (
-            <SelectItem key={e.id} value={e.id}>
-              {e.title} — {formatDateTime(e.start_at)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {selectedEvent && (
-        <>
-          <p className="text-sm text-muted-foreground">
-            {attendedCount}/{roster.length} marcados presentes. La asistencia real de este evento se
-            usa para el sueldo semanal si cayó dentro de los últimos 7 días.
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="pb-2 font-normal">Operador</th>
-                  <th className="pb-2 font-normal">RSVP Discord</th>
-                  <th className="pb-2 font-normal">Presente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roster.map((r) => (
-                  <AttendanceRow
-                    key={r.id}
-                    profileId={r.id}
-                    callsign={r.callsign}
-                    eventId={eventId}
-                    rsvp={eventRsvps.find((x) => x.profile_id === r.id)}
-                    attended={eventAttendance.find((x) => x.profile_id === r.id)?.attended ?? false}
-                    onChanged={(attended) =>
-                      setLocalAttendance((prev) => {
-                        const next = prev.filter(
-                          (a) => !(a.event_id === eventId && a.profile_id === r.id)
-                        );
-                        next.push({
-                          id: `local-${eventId}-${r.id}`,
-                          event_id: eventId,
-                          profile_id: r.id,
-                          attended,
-                          marked_by: null,
-                          marked_at: new Date().toISOString(),
-                        });
-                        return next;
-                      })
-                    }
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      {events.map((event, i) => {
+        const attendedCount = roster.filter((r) => attendanceMap.get(key(event.id, r.id))).length;
+        return (
+          <details
+            key={event.id}
+            open={i === 0}
+            className="rounded-md border border-border/60 [&_summary::-webkit-details-marker]:hidden"
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3">
+              <div>
+                <p className="font-medium">{event.title}</p>
+                <p className="text-xs text-muted-foreground">{formatDateTime(event.start_at)}</p>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {attendedCount}/{roster.length} presentes
+              </span>
+            </summary>
+            <div className="overflow-x-auto border-t border-border/60 p-3">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-muted-foreground">
+                    <th className="pb-2 font-normal">Operador</th>
+                    <th className="pb-2 font-normal">Marcó en Discord</th>
+                    <th className="pb-2 font-normal">Asistió realmente</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roster.map((r) => (
+                    <AttendanceRow
+                      key={r.id}
+                      profileId={r.id}
+                      callsign={r.callsign}
+                      eventId={event.id}
+                      rsvp={rsvpMap.get(key(event.id, r.id))}
+                      attended={attendanceMap.get(key(event.id, r.id)) ?? false}
+                      onRsvpChanged={(response) =>
+                        setRsvpMap((prev) => {
+                          const next = new Map(prev);
+                          if (response === null) next.delete(key(event.id, r.id));
+                          else next.set(key(event.id, r.id), response);
+                          return next;
+                        })
+                      }
+                      onAttendedChanged={(attended) =>
+                        setAttendanceMap((prev) => new Map(prev).set(key(event.id, r.id), attended))
+                      }
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        );
+      })}
     </div>
   );
 }
@@ -113,30 +113,53 @@ function AttendanceRow({
   eventId,
   rsvp,
   attended,
-  onChanged,
+  onRsvpChanged,
+  onAttendedChanged,
 }: {
   profileId: string;
   callsign: string;
   eventId: string;
-  rsvp?: EventRsvp;
+  rsvp?: RsvpResponse;
   attended: boolean;
-  onChanged: (attended: boolean) => void;
+  onRsvpChanged: (response: RsvpResponse | null) => void;
+  onAttendedChanged: (attended: boolean) => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const rsvpLabel = useMemo(() => (rsvp ? RSVP_LABEL[rsvp.response] : "Sin responder"), [rsvp]);
 
   return (
     <tr className="border-t border-border/40">
       <td className="py-1.5 font-medium">{callsign}</td>
       <td className="py-1.5">
-        <Badge variant="outline">{rsvpLabel}</Badge>
+        <Select
+          value={rsvp ?? "sin_marcar"}
+          disabled={pending}
+          onValueChange={(v) => {
+            const response = v === "sin_marcar" ? null : (v as RsvpResponse);
+            onRsvpChanged(response);
+            startTransition(async () => {
+              const result = await setDiscordRsvp(eventId, profileId, response);
+              if (result?.error) toast.error(result.error);
+            });
+          }}
+        >
+          <SelectTrigger size="sm" className="w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(RSVP_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </td>
       <td className="py-1.5">
         <Switch
           checked={attended}
           disabled={pending}
           onCheckedChange={(checked) => {
-            onChanged(checked);
+            onAttendedChanged(checked);
             startTransition(async () => {
               const result = await markAttendance(eventId, profileId, checked);
               if (result?.error) toast.error(result.error);

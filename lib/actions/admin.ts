@@ -374,8 +374,23 @@ export async function logContract(input: {
     .select("label, amount")
     .in("label", input.bonusLabels.length > 0 ? input.bonusLabels : [""]);
 
-  const total = (bonusTypes ?? []).reduce((sum, b) => sum + b.amount, 0);
-  if (total <= 0) return { error: "Seleccioná al menos un bono con monto." };
+  const baseTotal = (bonusTypes ?? []).reduce((sum, b) => sum + b.amount, 0);
+  if (baseTotal <= 0) return { error: "Seleccioná al menos un bono con monto." };
+
+  // El nivel de riesgo aplica como multiplicador sobre el total de bonos
+  // (ej: nivel 3 = 15% → total * 1.15), según los porcentajes documentados
+  // del clan.
+  let total = baseTotal;
+  if (input.riskLevel != null) {
+    const { data: riskRow } = await admin
+      .from("contract_risk_levels")
+      .select("percentage")
+      .eq("level", input.riskLevel)
+      .single();
+    if (riskRow) {
+      total = Math.round(baseTotal * (1 + Number(riskRow.percentage)));
+    }
+  }
 
   const { error } = await admin.rpc("log_contract", {
     p_profile_ids: input.profileIds,
@@ -631,6 +646,63 @@ export async function createSanctionType(input: {
   });
   if (error) return { error: error.message };
   revalidatePath("/admin/sanciones");
+  return { success: true };
+}
+
+// ============================================================
+// TESORERÍA — presupuesto general del GOCS, separado del saldo individual
+// ============================================================
+export async function updateTreasurySettings(weeklyIncome: number): Promise<ActionResult> {
+  await requireCommandStaff();
+  if (!Number.isFinite(weeklyIncome) || weeklyIncome < 0) {
+    return { error: "El ingreso semanal debe ser un número válido." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("treasury")
+    .update({ weekly_income: weeklyIncome, updated_at: new Date().toISOString() })
+    .eq("id", true);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/tesoreria");
+  return { success: true };
+}
+
+export async function recordTreasuryExpense(input: {
+  type: "armamento" | "gastos_generales" | "ajuste";
+  amount: number;
+  detail: string;
+}): Promise<ActionResult> {
+  const staff = await requireCommandStaff();
+  if (!input.amount || input.amount === 0) return { error: "El monto no puede ser cero." };
+  if (!input.detail.trim()) return { error: "Agregá un detalle del gasto." };
+
+  const admin = createAdminClient();
+  // Los gastos siempre se registran en negativo, sea cual sea el signo que
+  // haya tipeado el usuario — un "gasto" nunca suma a la tesorería.
+  const amount = -Math.abs(input.amount);
+  const { error } = await admin.from("treasury_transactions").insert({
+    type: input.type,
+    amount,
+    detail: input.detail,
+    created_by: staff.id,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/tesoreria");
+  return { success: true };
+}
+
+export async function recordTreasuryAdjustment(amount: number, detail: string): Promise<ActionResult> {
+  const staff = await requireCommandStaff();
+  if (!amount) return { error: "El monto no puede ser cero." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("treasury_transactions").insert({
+    type: "ajuste",
+    amount,
+    detail: detail || "Ajuste manual",
+    created_by: staff.id,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/tesoreria");
   return { success: true };
 }
 

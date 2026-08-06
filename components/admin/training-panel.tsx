@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { Skill, SkillEvaluation, SkillResult, TrainingMaterial } from "@/types/database";
@@ -90,29 +91,40 @@ export function TrainingPanel({
 }
 
 function EvaluationForm({ profiles, skills }: { profiles: RosterEntry[]; skills: Skill[] }) {
-  const [profileId, setProfileId] = useState("");
-  const [skillId, setSkillId] = useState("");
+  const [profileIds, setProfileIds] = useState<Set<string>>(new Set());
+  const [skillIds, setSkillIds] = useState<Set<string>>(new Set());
   const [result, setResult] = useState<SkillResult>("aprobado");
   const [score, setScore] = useState("");
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
 
+  function toggle(set: Set<string>, setSet: (s: Set<string>) => void, value: string) {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    setSet(next);
+  }
+
   function submit() {
-    if (!profileId || !skillId) {
-      toast.error("Elegí soldado y habilidad.");
+    if (profileIds.size === 0 || skillIds.size === 0) {
+      toast.error("Elegí al menos un soldado y un módulo.");
       return;
     }
     startTransition(async () => {
       const res = await evaluateSkill({
-        profileId,
-        skillId,
+        profileIds: Array.from(profileIds),
+        skillIds: Array.from(skillIds),
         result,
         score: score ? Number(score) : null,
         notes,
       });
       if (res?.error) toast.error(res.error);
       else {
-        toast.success("Evaluación cargada.");
+        toast.success(
+          `${profileIds.size * skillIds.size} evaluación(es) cargadas (${profileIds.size} soldados × ${skillIds.size} módulos).`
+        );
+        setProfileIds(new Set());
+        setSkillIds(new Set());
         setNotes("");
         setScore("");
       }
@@ -123,34 +135,32 @@ function EvaluationForm({ profiles, skills }: { profiles: RosterEntry[]; skills:
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label className="mb-2 block">Soldado</Label>
-          <Select value={profileId} onValueChange={setProfileId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Elegir soldado" />
-            </SelectTrigger>
-            <SelectContent>
-              {profiles.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.callsign}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="mb-2 block">Soldados ({profileIds.size} seleccionados)</Label>
+          <div className="grid max-h-48 grid-cols-1 gap-1.5 overflow-y-auto rounded-md border border-border/60 p-3 sm:grid-cols-2">
+            {profiles.map((p) => (
+              <label key={p.id} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={profileIds.has(p.id)}
+                  onCheckedChange={() => toggle(profileIds, setProfileIds, p.id)}
+                />
+                {p.callsign}
+              </label>
+            ))}
+          </div>
         </div>
         <div>
-          <Label className="mb-2 block">Habilidad / módulo</Label>
-          <Select value={skillId} onValueChange={setSkillId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Elegir habilidad" />
-            </SelectTrigger>
-            <SelectContent>
-              {skills.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="mb-2 block">Módulos / habilidades ({skillIds.size} seleccionados)</Label>
+          <div className="grid max-h-48 grid-cols-1 gap-1.5 overflow-y-auto rounded-md border border-border/60 p-3">
+            {skills.map((s) => (
+              <label key={s.id} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={skillIds.has(s.id)}
+                  onCheckedChange={() => toggle(skillIds, setSkillIds, s.id)}
+                />
+                {s.name}
+              </label>
+            ))}
+          </div>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

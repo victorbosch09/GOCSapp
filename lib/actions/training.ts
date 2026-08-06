@@ -36,26 +36,33 @@ export async function createSkill(input: {
 }
 
 export async function evaluateSkill(input: {
-  profileId: string;
-  skillId: string;
+  profileIds: string[];
+  skillIds: string[];
   result: SkillResult;
   score: number | null;
   notes: string;
 }): Promise<ActionResult> {
   const staff = await requireInstructorOrStaff();
+  if (input.profileIds.length === 0) return { error: "Seleccioná al menos un soldado." };
+  if (input.skillIds.length === 0) return { error: "Seleccioná al menos un módulo/habilidad." };
+
   const admin = createAdminClient();
-  const { error } = await admin.from("skill_evaluations").insert({
-    profile_id: input.profileId,
-    skill_id: input.skillId,
-    result: input.result,
-    score: input.score,
-    notes: input.notes || null,
-    evaluated_by: staff.id,
-  });
+  const rows = input.profileIds.flatMap((profileId) =>
+    input.skillIds.map((skillId) => ({
+      profile_id: profileId,
+      skill_id: skillId,
+      result: input.result,
+      score: input.score,
+      notes: input.notes || null,
+      evaluated_by: staff.id,
+    }))
+  );
+  const { error } = await admin.from("skill_evaluations").insert(rows);
   if (error) return { error: error.message };
   revalidatePath("/admin/entrenamiento");
   revalidatePath("/entrenamiento");
   revalidatePath("/dashboard");
+  revalidatePath("/equipo");
   return { success: true };
 }
 

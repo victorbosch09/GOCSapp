@@ -111,6 +111,69 @@ export async function getAuditLog() {
   })[];
 }
 
+/**
+ * Todo lo necesario para el "Portal del operador" visto por mando —
+ * mismo tipo de datos que ve el propio soldado en /dashboard y
+ * /entrenamiento, pero para un profileId específico. Solo se usa desde
+ * páginas ya protegidas por requireCommandStaff().
+ */
+export async function getOperatorPortalData(profileId: string) {
+  const supabase = await createClient();
+
+  const [
+    { data: profile },
+    { data: transactions },
+    { data: contracts },
+    { data: inventory },
+    { data: evaluations },
+    { data: quizAttempts },
+  ] = await Promise.all([
+    supabase.from("profiles").select("*, rank:ranks(*)").eq("id", profileId).single(),
+    supabase
+      .from("transactions")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("created_at", { ascending: false })
+      .limit(30),
+    supabase
+      .from("contracts")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("created_at", { ascending: false })
+      .limit(15),
+    supabase
+      .from("inventory")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("acquired_at", { ascending: false }),
+    supabase
+      .from("skill_evaluations")
+      .select("*, skill:skills(name)")
+      .eq("profile_id", profileId)
+      .order("evaluated_at", { ascending: false }),
+    supabase
+      .from("quiz_attempts")
+      .select("*, quiz:quizzes(title)")
+      .eq("profile_id", profileId)
+      .order("completed_at", { ascending: false }),
+  ]);
+
+  return {
+    profile: profile as unknown as (import("@/types/database").Profile & {
+      rank: import("@/types/database").Rank | null;
+    }) | null,
+    transactions: transactions ?? [],
+    contracts: contracts ?? [],
+    inventory: inventory ?? [],
+    evaluations: (evaluations ?? []) as unknown as (import("@/types/database").SkillEvaluation & {
+      skill: { name: string } | null;
+    })[],
+    quizAttempts: (quizAttempts ?? []) as unknown as (import("@/types/database").QuizAttempt & {
+      quiz: { title: string } | null;
+    })[],
+  };
+}
+
 export async function getRecentNotifications() {
   const supabase = await createClient();
   const { data } = await supabase

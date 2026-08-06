@@ -21,6 +21,7 @@ const GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
   {
     label: "Economía",
     links: [
+      { href: "/admin/tesoreria", label: "Tesorería" },
       { href: "/admin/catalogo", label: "Catálogo" },
       { href: "/admin/movimientos", label: "Movimientos" },
       { href: "/admin/contratos", label: "Contratos" },

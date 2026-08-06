@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { formatCredits } from "@/lib/format";
-import type { Quiz, QuizDifficulty, QuizQuestion } from "@/types/database";
+import type { Quiz, QuizAttempt, QuizDifficulty, QuizQuestion } from "@/types/database";
 
 type QuizWithMeta = Quiz & { skill: { name: string } | null; questions: { id: string }[] };
 
@@ -26,8 +26,9 @@ const DIFFICULTY_BADGE: Record<QuizDifficulty, string> = {
   dificil: "bg-destructive/15 text-destructive",
 };
 
-export function QuizList({ quizzes }: { quizzes: QuizWithMeta[] }) {
+export function QuizList({ quizzes, attempts }: { quizzes: QuizWithMeta[]; attempts: QuizAttempt[] }) {
   const [activeQuiz, setActiveQuiz] = useState<QuizWithMeta | null>(null);
+  const attemptByQuiz = new Map(attempts.map((a) => [a.quiz_id, a]));
 
   if (quizzes.length === 0) {
     return <p className="text-sm text-muted-foreground">No hay quizzes disponibles todavía.</p>;
@@ -35,28 +36,46 @@ export function QuizList({ quizzes }: { quizzes: QuizWithMeta[] }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {quizzes.map((q) => (
-        <Card key={q.id}>
-          <CardContent className="flex items-center justify-between gap-3 py-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{q.title}</p>
-                <Badge className={DIFFICULTY_BADGE[q.difficulty]} variant="secondary">
-                  {DIFFICULTY_LABEL[q.difficulty]}
-                </Badge>
-                {q.skill?.name && <Badge variant="secondary">{q.skill.name}</Badge>}
+      {quizzes.map((q) => {
+        const done = attemptByQuiz.get(q.id);
+        return (
+          <Card key={q.id}>
+            <CardContent className="flex items-center justify-between gap-3 py-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{q.title}</p>
+                  <Badge className={DIFFICULTY_BADGE[q.difficulty]} variant="secondary">
+                    {DIFFICULTY_LABEL[q.difficulty]}
+                  </Badge>
+                  {q.skill?.name && <Badge variant="secondary">{q.skill.name}</Badge>}
+                  {done && (
+                    <Badge
+                      className={
+                        done.score / done.total >= 0.7
+                          ? "bg-emerald-500/15 text-emerald-400"
+                          : "bg-destructive/15 text-destructive"
+                      }
+                      variant="secondary"
+                    >
+                      Ya rendido — {done.score}/{done.total}
+                    </Badge>
+                  )}
+                </div>
+                {q.description && <p className="text-sm text-muted-foreground">{q.description}</p>}
+                {!done && (
+                  <p className="text-xs text-muted-foreground">
+                    {q.questions.length} preguntas · Aprobar (≥70%) da +{formatCredits(1000)} — un
+                    solo intento
+                  </p>
+                )}
               </div>
-              {q.description && <p className="text-sm text-muted-foreground">{q.description}</p>}
-              <p className="text-xs text-muted-foreground">
-                {q.questions.length} preguntas · Aprobar (≥70%) da +{formatCredits(1000)}
-              </p>
-            </div>
-            <Button size="sm" onClick={() => setActiveQuiz(q)}>
-              Hacer quiz
-            </Button>
-          </CardContent>
-        </Card>
-      ))}
+              <Button size="sm" onClick={() => setActiveQuiz(q)} disabled={!!done} title={done ? "Ya rendiste este quiz — no se puede repetir" : undefined}>
+                {done ? "Rendido" : "Hacer quiz"}
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      })}
       {activeQuiz && (
         <QuizPlayerModal
           quizId={activeQuiz.id}

@@ -13,9 +13,9 @@ export default async function AsistenciaPage() {
       <div>
         <h1 className="font-heading text-2xl">Asistencia</h1>
         <p className="text-muted-foreground">
-          Respondé en Discord (asiste / tal vez / no asiste) para los próximos entrenamientos y
-          operaciones. La asistencia real, cargada por el mando después de cada actividad,
-          condiciona el sueldo semanal (menos del 50% de asistencia esa semana = sin sueldo).
+          Avisá tu asistencia por Discord — el mando la carga acá. La asistencia real, registrada
+          después de cada actividad, condiciona el sueldo semanal (menos del 50% de asistencia esa
+          semana = sin sueldo).
         </p>
       </div>
       <AttendanceBoard

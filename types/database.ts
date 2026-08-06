@@ -304,6 +304,24 @@ export type QuizAttemptResult = QuizAttempt & {
   bonus_amount: number;
 };
 
+export type Treasury = {
+  id: boolean;
+  balance: number;
+  weekly_income: number;
+  updated_at: string;
+};
+
+export type TreasuryTransactionType = "ingreso" | "nomina" | "armamento" | "gastos_generales" | "ajuste";
+
+export type TreasuryTransaction = {
+  id: string;
+  type: TreasuryTransactionType;
+  amount: number;
+  detail: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
 export type TeamOverview = {
   total_soldados_activos: number;
   nomina_semanal_total: number;
@@ -391,6 +409,8 @@ export type Database = {
       quizzes: TableDef<Quiz, Partial<Quiz>>;
       quiz_questions: TableDef<QuizQuestion, Partial<QuizQuestion>>;
       quiz_attempts: TableDef<QuizAttempt, Partial<QuizAttempt>>;
+      treasury: TableDef<Treasury, Partial<Treasury>>;
+      treasury_transactions: TableDef<TreasuryTransaction, Partial<TreasuryTransaction>>;
     };
     Views: {
       team_overview: ViewDef<TeamOverview>;
