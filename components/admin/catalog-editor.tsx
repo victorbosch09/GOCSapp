@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -69,7 +68,7 @@ export function CatalogEditor({
                     <TableHead>Categoría</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead className="w-28">Precio (cr)</TableHead>
-                    <TableHead className="w-20">En stock</TableHead>
+                    <TableHead className="w-24">Stock</TableHead>
                     <TableHead className="w-44">Rango mínimo</TableHead>
                     <TableHead className="w-20">Borrar</TableHead>
                   </TableRow>
@@ -128,7 +127,7 @@ function NewItemDialog({ table, label }: { table: Table_; label: string }) {
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Ítem agregado (queda sin stock hasta que lo actives).");
+        toast.success("Ítem agregado con stock 0 — cargá unidades desde la fila.");
         reset();
         setOpen(false);
       }
@@ -198,13 +197,13 @@ function NewItemDialog({ table, label }: { table: Table_; label: string }) {
 
 function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: Table_; ranks: Rank[] }) {
   const [price, setPrice] = useState(String(item.price));
-  const [inStock, setInStock] = useState(item.in_stock);
+  const [stock, setStock] = useState(String(item.stock));
   const [imageUrl, setImageUrl] = useState(item.image_url);
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function save(patch: { price?: number; in_stock?: boolean; min_rank_sort_order?: number | null }) {
+  function save(patch: { price?: number; stock?: number; min_rank_sort_order?: number | null }) {
     startTransition(async () => {
       const result = await updateCatalogItem(table, item.id, patch);
       if (result?.error) toast.error(result.error);
@@ -285,12 +284,18 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
         />
       </TableCell>
       <TableCell>
-        <Switch
-          checked={inStock}
-          onCheckedChange={(checked) => {
-            setInStock(checked);
-            save({ in_stock: checked });
+        <Input
+          type="number"
+          min={0}
+          step={1}
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+          onBlur={() => {
+            const n = Number(stock);
+            if (Number.isInteger(n) && n >= 0 && n !== item.stock) save({ stock: n });
+            else setStock(String(item.stock));
           }}
+          className="h-8 w-20"
         />
       </TableCell>
       <TableCell>

@@ -250,7 +250,7 @@ export async function updateCatalogItem(
   id: string,
   patch: {
     price?: number;
-    in_stock?: boolean;
+    stock?: number;
     notes?: string | null;
     min_rank_sort_order?: number | null;
     image_url?: string | null;
@@ -258,6 +258,9 @@ export async function updateCatalogItem(
 ): Promise<ActionResult> {
   await requireCommandStaff();
   if (!CATALOG_TABLES.includes(table)) return { error: "Categoría inválida." };
+  if (patch.stock !== undefined && (!Number.isInteger(patch.stock) || patch.stock < 0)) {
+    return { error: "El stock tiene que ser un número entero mayor o igual a 0." };
+  }
   const admin = createAdminClient();
   const { error } = await admin.from(table).update(patch).eq("id", id);
   if (error) return { error: error.message };
@@ -292,7 +295,7 @@ export async function createCatalogItem(
     category: input.category,
     name: input.name,
     price: input.price,
-    in_stock: false,
+    stock: 0,
     notes: input.notes,
   };
   if (table !== "vehicles") {

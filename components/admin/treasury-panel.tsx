@@ -22,6 +22,7 @@ const TYPE_LABEL: Record<TreasuryTransactionType, string> = {
   armamento: "Armamento / stock",
   gastos_generales: "Gastos generales",
   ajuste: "Ajuste",
+  devolucion: "Devolución (reventa)",
 };
 
 const TYPE_BADGE: Record<TreasuryTransactionType, string> = {
@@ -30,6 +31,7 @@ const TYPE_BADGE: Record<TreasuryTransactionType, string> = {
   armamento: "bg-amber-500/15 text-amber-400",
   gastos_generales: "bg-amber-500/15 text-amber-400",
   ajuste: "bg-muted text-muted-foreground",
+  devolucion: "bg-destructive/15 text-destructive",
 };
 
 type TxnRow = TreasuryTransaction & { actor: { callsign: string } | null };

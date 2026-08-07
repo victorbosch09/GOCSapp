@@ -135,7 +135,8 @@ function ItemCard({
 
   const affordable = balance >= item.price;
   const rankOk = minRank == null || myRankSortOrder >= minRank;
-  const disabled = pending || !canBuy || !item.in_stock || !affordable || !rankOk;
+  const inStock = item.stock > 0;
+  const disabled = pending || !canBuy || !inStock || !affordable || !rankOk;
 
   function handleBuy() {
     startTransition(async () => {
@@ -169,8 +170,8 @@ function ItemCard({
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-sm font-medium leading-snug">{item.name}</CardTitle>
-          <Badge variant={item.in_stock ? "secondary" : "outline"} className="shrink-0">
-            {item.in_stock ? "Disponible" : "Sin stock"}
+          <Badge variant={inStock ? "secondary" : "outline"} className="shrink-0">
+            {inStock ? `Disponible (${item.stock})` : "Sin stock"}
           </Badge>
         </div>
       </CardHeader>
@@ -190,15 +191,29 @@ function ItemCard({
         <Button
           size="sm"
           className={
-            item.in_stock && affordable && canBuy && rankOk
+            inStock && affordable && canBuy && rankOk
               ? "mt-2 bg-emerald-600 text-white hover:bg-emerald-500"
               : "mt-2"
           }
           disabled={disabled}
           onClick={handleBuy}
-          title={!affordable ? "Saldo insuficiente" : !rankOk ? "Rango insuficiente" : undefined}
+          title={
+            !inStock
+              ? "Sin stock disponible"
+              : !affordable
+                ? "Saldo insuficiente"
+                : !rankOk
+                  ? "Rango insuficiente"
+                  : undefined
+          }
         >
-          {pending ? "Comprando..." : !rankOk ? "Rango insuficiente" : "Comprar"}
+          {pending
+            ? "Comprando..."
+            : !inStock
+              ? "Sin stock"
+              : !rankOk
+                ? "Rango insuficiente"
+                : "Comprar"}
         </Button>
       </CardContent>
     </Card>

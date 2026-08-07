@@ -45,7 +45,7 @@ export type CatalogItem = {
   mag_price_standard: number | null;
   mag_price_special: number | null;
   capacity: string | null;
-  in_stock: boolean;
+  stock: number;
   image_url: string | null;
   notes: string | null;
   min_rank_sort_order: number | null;
@@ -57,7 +57,7 @@ export type Vehicle = {
   category: string;
   name: string;
   price: number;
-  in_stock: boolean;
+  stock: number;
   image_url: string | null;
   notes: string | null;
   min_rank_sort_order: number | null;
@@ -311,7 +311,13 @@ export type Treasury = {
   updated_at: string;
 };
 
-export type TreasuryTransactionType = "ingreso" | "nomina" | "armamento" | "gastos_generales" | "ajuste";
+export type TreasuryTransactionType =
+  | "ingreso"
+  | "nomina"
+  | "armamento"
+  | "gastos_generales"
+  | "ajuste"
+  | "devolucion";
 
 export type TreasuryTransaction = {
   id: string;
