@@ -64,7 +64,7 @@ export function QuizList({ quizzes, attempts }: { quizzes: QuizWithMeta[]; attem
                 {q.description && <p className="text-sm text-muted-foreground">{q.description}</p>}
                 {!done && (
                   <p className="text-xs text-muted-foreground">
-                    {q.questions.length} preguntas · Aprobar (≥70%) da +{formatCredits(1000)} — un
+                    {q.questions.length} preguntas · Aprobar (≥70%) da +{formatCredits(q.bonus_amount)} — un
                     solo intento
                   </p>
                 )}

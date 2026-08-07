@@ -13,11 +13,15 @@ export async function createQuiz(input: {
   description: string;
   skillId: string | null;
   difficulty: QuizDifficulty;
+  bonusAmount: number;
   questions: { question: string; options: string[]; correctIndex: number }[];
 }): Promise<ActionResult> {
   const staff = await requireInstructorOrStaff();
   if (!input.title.trim()) return { error: "El título es obligatorio." };
   if (input.questions.length === 0) return { error: "Agregá al menos una pregunta." };
+  if (!Number.isFinite(input.bonusAmount) || input.bonusAmount < 0) {
+    return { error: "El bono tiene que ser un número mayor o igual a 0." };
+  }
   for (const q of input.questions) {
     if (!q.question.trim() || q.options.some((o) => !o.trim())) {
       return { error: "Todas las preguntas y opciones deben tener texto." };
@@ -32,6 +36,7 @@ export async function createQuiz(input: {
       description: input.description || null,
       skill_id: input.skillId,
       difficulty: input.difficulty,
+      bonus_amount: input.bonusAmount,
       created_by: staff.id,
     })
     .select()
@@ -48,6 +53,19 @@ export async function createQuiz(input: {
   const { error: qError } = await admin.from("quiz_questions").insert(rows);
   if (qError) return { error: qError.message };
 
+  revalidatePath("/admin/entrenamiento");
+  revalidatePath("/entrenamiento");
+  return { success: true };
+}
+
+export async function updateQuizBonus(quizId: string, bonusAmount: number): Promise<ActionResult> {
+  await requireInstructorOrStaff();
+  if (!Number.isFinite(bonusAmount) || bonusAmount < 0) {
+    return { error: "El bono tiene que ser un número mayor o igual a 0." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin.from("quizzes").update({ bonus_amount: bonusAmount }).eq("id", quizId);
+  if (error) return { error: error.message };
   revalidatePath("/admin/entrenamiento");
   revalidatePath("/entrenamiento");
   return { success: true };

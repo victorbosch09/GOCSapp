@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { createQuiz, deleteQuiz } from "@/lib/actions/quiz";
+import { createQuiz, deleteQuiz, updateQuizBonus } from "@/lib/actions/quiz";
+import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,7 @@ export function QuizBuilder({ skills, quizzes }: { skills: Skill[]; quizzes: Qui
   const [description, setDescription] = useState("");
   const [skillId, setSkillId] = useState<string>("none");
   const [difficulty, setDifficulty] = useState<QuizDifficulty>("media");
+  const [bonusAmount, setBonusAmount] = useState("1000");
   const [questions, setQuestions] = useState<DraftQuestion[]>([emptyQuestion()]);
   const [pending, startTransition] = useTransition();
 
@@ -51,22 +53,31 @@ export function QuizBuilder({ skills, quizzes }: { skills: Skill[]; quizzes: Qui
   }
 
   function submit() {
+    const parsedBonus = Number(bonusAmount);
+    if (!Number.isFinite(parsedBonus) || parsedBonus < 0) {
+      toast.error("El bono tiene que ser un número mayor o igual a 0.");
+      return;
+    }
     startTransition(async () => {
       const result = await createQuiz({
         title,
         description,
         skillId: skillId === "none" ? null : skillId,
         difficulty,
+        bonusAmount: parsedBonus,
         questions,
       });
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Quiz creado. Si alguien lo aprueba (≥70%) por primera vez, gana 1000cr automáticos.");
+        toast.success(
+          `Quiz creado. Si alguien lo aprueba (≥70%) por primera vez, gana ${formatCredits(parsedBonus)} automáticos.`
+        );
         setTitle("");
         setDescription("");
         setSkillId("none");
         setDifficulty("media");
+        setBonusAmount("1000");
         setQuestions([emptyQuestion()]);
       }
     });
@@ -97,20 +108,31 @@ export function QuizBuilder({ skills, quizzes }: { skills: Skill[]; quizzes: Qui
             </Select>
           </div>
         </div>
-        <div>
-          <Label className="mb-2 block">Dificultad</Label>
-          <Select value={difficulty} onValueChange={(v) => setDifficulty(v as QuizDifficulty)}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DIFFICULTIES.map((d) => (
-                <SelectItem key={d.value} value={d.value}>
-                  {d.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label className="mb-2 block">Dificultad</Label>
+            <Select value={difficulty} onValueChange={(v) => setDifficulty(v as QuizDifficulty)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DIFFICULTIES.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="mb-2 block">Bono al aprobar (créditos)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={bonusAmount}
+              onChange={(e) => setBonusAmount(e.target.value)}
+            />
+          </div>
         </div>
         <div>
           <Label className="mb-2 block">Descripción (opcional)</Label>
@@ -184,6 +206,8 @@ export function QuizBuilder({ skills, quizzes }: { skills: Skill[]; quizzes: Qui
 
 function QuizRow({ quiz }: { quiz: QuizWithMeta }) {
   const [pending, startTransition] = useTransition();
+  const [bonus, setBonus] = useState(String(quiz.bonus_amount));
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm">
       <div>
@@ -196,20 +220,51 @@ function QuizRow({ quiz }: { quiz: QuizWithMeta }) {
         </div>
         <p className="text-xs text-muted-foreground">{quiz.questions.length} preguntas</p>
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={pending}
-        onClick={() => {
-          if (!confirm("¿Borrar este quiz? Se pierden sus preguntas.")) return;
-          startTransition(async () => {
-            const result = await deleteQuiz(quiz.id);
-            if (result?.error) toast.error(result.error);
-          });
-        }}
-      >
-        Borrar
-      </Button>
+      <div className="flex shrink-0 items-center gap-2">
+        <Label htmlFor={`bonus-${quiz.id}`} className="text-xs text-muted-foreground">
+          Bono
+        </Label>
+        <Input
+          id={`bonus-${quiz.id}`}
+          type="number"
+          min={0}
+          value={bonus}
+          onChange={(e) => setBonus(e.target.value)}
+          onBlur={() => {
+            const n = Number(bonus);
+            if (!Number.isFinite(n) || n < 0) {
+              setBonus(String(quiz.bonus_amount));
+              return;
+            }
+            if (n !== quiz.bonus_amount) {
+              startTransition(async () => {
+                const result = await updateQuizBonus(quiz.id, n);
+                if (result?.error) {
+                  toast.error(result.error);
+                  setBonus(String(quiz.bonus_amount));
+                } else {
+                  toast.success("Bono actualizado.");
+                }
+              });
+            }
+          }}
+          className="h-8 w-24"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          onClick={() => {
+            if (!confirm("¿Borrar este quiz? Se pierden sus preguntas.")) return;
+            startTransition(async () => {
+              const result = await deleteQuiz(quiz.id);
+              if (result?.error) toast.error(result.error);
+            });
+          }}
+        >
+          Borrar
+        </Button>
+      </div>
     </div>
   );
 }
