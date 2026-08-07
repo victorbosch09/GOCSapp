@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { signup } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PasswordStrengthMeter } from "@/components/auth/password-strength";
 
 export function SignupForm() {
   const [state, action, pending] = useActionState(signup, undefined);
+  const [password, setPassword] = useState("");
 
   return (
     <Card>
@@ -43,7 +45,10 @@ export function SignupForm() {
               type="password"
               autoComplete="new-password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
+            <PasswordStrengthMeter password={password} />
             {state?.errors?.password && (
               <ul className="text-sm text-destructive">
                 {state.errors.password.map((e) => (

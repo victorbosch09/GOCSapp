@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { getOwnEvaluations, getTrainingMaterials, getOwnTrainingStats } from "@/lib/data/training";
-import { getQuizzes, getOwnQuizAttempts } from "@/lib/data/quiz";
+import { getQuizzes, getOwnQuizAttempts, getQuizLeaderboard } from "@/lib/data/quiz";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuizList } from "@/components/training/quiz-player";
 import { TrainingStatsCard } from "@/components/training/stats-card";
+import { LeaderboardCard } from "@/components/training/leaderboard-card";
+import { MaterialsList } from "@/components/training/materials-list";
 
 export const metadata: Metadata = { title: "Entrenamiento — G.O.C.S." };
 
@@ -22,12 +24,13 @@ const RESULT_BADGE: Record<string, string> = {
 };
 
 export default async function EntrenamientoPage() {
-  const [stats, evaluations, materials, quizzes, attempts] = await Promise.all([
+  const [stats, evaluations, materials, quizzes, attempts, leaderboard] = await Promise.all([
     getOwnTrainingStats(),
     getOwnEvaluations(),
     getTrainingMaterials(),
     getQuizzes(),
     getOwnQuizAttempts(),
+    getQuizLeaderboard(),
   ]);
 
   return (
@@ -40,6 +43,8 @@ export default async function EntrenamientoPage() {
       </div>
 
       <TrainingStatsCard stats={stats} />
+
+      <LeaderboardCard entries={leaderboard} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -124,26 +129,8 @@ export default async function EntrenamientoPage() {
           <CardTitle className="font-heading text-base">📚 Material de estudio</CardTitle>
           <CardDescription>Biblioteca compartida del clan — cursos, manuales, exámenes.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {materials.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Todavía no hay material cargado.</p>
-          ) : (
-            materials.map((m) => (
-              <a
-                key={m.id}
-                href={m.url ?? undefined}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-md border border-border/60 p-3 text-sm transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{m.title}</span>
-                  {m.category && <Badge variant="secondary">{m.category}</Badge>}
-                </div>
-                {m.description && <p className="mt-1 text-muted-foreground">{m.description}</p>}
-              </a>
-            ))
-          )}
+        <CardContent>
+          <MaterialsList materials={materials} />
         </CardContent>
       </Card>
     </div>

@@ -16,7 +16,13 @@ const LINKS = [
   { href: "/entrenamiento", label: "Entrenamiento" },
 ];
 
-export function AppNav({ isCommandStaff }: { isCommandStaff: boolean }) {
+export function AppNav({
+  isCommandStaff,
+  unreadCount = 0,
+}: {
+  isCommandStaff: boolean;
+  unreadCount?: number;
+}) {
   const pathname = usePathname();
 
   const links = isCommandStaff ? [...LINKS, { href: "/admin", label: "Mando" }] : LINKS;
@@ -31,12 +37,17 @@ export function AppNav({ isCommandStaff }: { isCommandStaff: boolean }) {
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-md px-3 py-1.5 font-medium tracking-wide text-muted-foreground transition-colors hover:text-foreground",
+                "relative rounded-md px-3 py-1.5 font-medium tracking-wide text-muted-foreground transition-colors hover:text-foreground",
                 pathname.startsWith(link.href) &&
                   "bg-primary/15 text-foreground"
               )}
             >
               {link.label}
+              {link.href === "/dashboard" && unreadCount > 0 && (
+                <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-gocs-red px-1 text-[10px] font-semibold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

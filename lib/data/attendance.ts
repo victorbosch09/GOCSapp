@@ -32,6 +32,50 @@ export async function getUpcomingEventsForDashboard(limit = 3) {
   }));
 }
 
+/**
+ * Racha de asistencia real, contando hacia atrás desde el evento pasado más
+ * reciente que ya tiene asistencia cargada por el mando. Eventos sin marcar
+ * todavía se saltean (no rompen ni suman la racha) en vez de tratarse como
+ * ausencia — no es culpa del soldado que el mando no lo haya cargado.
+ */
+export async function getOwnAttendanceStreak() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  const { data: events } = await supabase
+    .from("events")
+    .select("id")
+    .in("event_type", ["entrenamiento", "operacion"])
+    .lt("start_at", new Date().toISOString())
+    .order("start_at", { ascending: false })
+    .limit(30);
+
+  if (!events || events.length === 0) return 0;
+
+  const { data: attendance } = await supabase
+    .from("event_attendance")
+    .select("event_id, attended")
+    .eq("profile_id", user.id)
+    .in(
+      "event_id",
+      events.map((e) => e.id)
+    );
+
+  const byEvent = new Map((attendance ?? []).map((a) => [a.event_id, a.attended]));
+
+  let streak = 0;
+  for (const event of events) {
+    const attended = byEvent.get(event.id);
+    if (attended === undefined) continue;
+    if (attended) streak++;
+    else break;
+  }
+  return streak;
+}
+
 export async function getAttendanceBoard() {
   const supabase = await createClient();
 

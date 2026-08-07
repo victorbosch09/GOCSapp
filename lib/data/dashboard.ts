@@ -66,11 +66,38 @@ export async function getOwnNotifications(limit = 10) {
     orParts.push(`and(target_type.eq.squad,target_id.eq.${profile.squad})`);
   }
 
-  const { data } = await supabase
-    .from("notifications")
-    .select("*")
-    .or(orParts.join(","))
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  return data ?? [];
+  const [{ data: notifications }, { data: reads }] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("*")
+      .or(orParts.join(","))
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    supabase.from("notification_reads").select("notification_id").eq("profile_id", userId),
+  ]);
+
+  const readIds = new Set((reads ?? []).map((r) => r.notification_id));
+  return (notifications ?? []).map((n) => ({ ...n, read: readIds.has(n.id) }));
+}
+
+/** Cuenta de notificaciones sin leer, para el badge del nav. Misma lógica de targeting que getOwnNotifications, sin traer el contenido. */
+export async function getUnreadNotificationCount() {
+  const supabase = await createClient();
+  const userId = await currentUserId(supabase);
+  if (!userId) return 0;
+
+  const { data: profile } = await supabase.from("profiles").select("squad").eq("id", userId).single();
+
+  const orParts = [`target_type.eq.all`, `and(target_type.eq.profile,target_id.eq.${userId})`];
+  if (profile?.squad) {
+    orParts.push(`and(target_type.eq.squad,target_id.eq.${profile.squad})`);
+  }
+
+  const [{ data: notifications }, { data: reads }] = await Promise.all([
+    supabase.from("notifications").select("id").or(orParts.join(",")),
+    supabase.from("notification_reads").select("notification_id").eq("profile_id", userId),
+  ]);
+
+  const readIds = new Set((reads ?? []).map((r) => r.notification_id));
+  return (notifications ?? []).filter((n) => !readIds.has(n.id)).length;
 }

@@ -7,6 +7,7 @@ import {
   updateCatalogItem,
   uploadItemImage,
   createCatalogItem,
+  duplicateCatalogItem,
   deleteCatalogItem,
 } from "@/lib/actions/admin";
 import { resizeToRectPng } from "@/lib/resize-image";
@@ -70,7 +71,7 @@ export function CatalogEditor({
                     <TableHead className="w-28">Precio (cr)</TableHead>
                     <TableHead className="w-24">Stock</TableHead>
                     <TableHead className="w-44">Rango mínimo</TableHead>
-                    <TableHead className="w-20">Borrar</TableHead>
+                    <TableHead className="w-40">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -316,7 +317,21 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell>
+      <TableCell className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          onClick={() => {
+            startTransition(async () => {
+              const result = await duplicateCatalogItem(table, item.id);
+              if (result?.error) toast.error(result.error);
+              else toast.success(`"${item.name}" duplicado (stock 0).`);
+            });
+          }}
+        >
+          Duplicar
+        </Button>
         <Button
           size="sm"
           variant="outline"

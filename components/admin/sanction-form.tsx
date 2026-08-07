@@ -24,6 +24,7 @@ export function SanctionForm({
   const [severity, setSeverity] = useState<SanctionSeverity>("leve");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
   const [pending, startTransition] = useTransition();
 
   const selectedType = useMemo(
@@ -52,6 +53,7 @@ export function SanctionForm({
         severity,
         description,
         amountDeducted: amount ? Number(amount) : null,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
       });
       if (result?.error) {
         toast.error(result.error);
@@ -61,6 +63,7 @@ export function SanctionForm({
         setTypeId("");
         setDescription("");
         setAmount("");
+        setExpiresAt("");
       }
     });
   }
@@ -128,6 +131,11 @@ export function SanctionForm({
           <Label className="mb-2 block">Descuento en créditos (opcional)</Label>
           <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </div>
+      </div>
+
+      <div>
+        <Label className="mb-2 block">Vence el (opcional — vacío = sin vencimiento)</Label>
+        <Input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="w-48" />
       </div>
 
       <div>

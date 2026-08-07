@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDateTime } from "@/lib/format";
+import { downloadIcsEvent } from "@/lib/ics";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { Event, EventType } from "@/types/database";
 
 const TYPE_LABEL: Record<EventType, string> = {
@@ -55,29 +57,45 @@ export function EventList({ initial }: { initial: Event[] }) {
     return <p className="text-sm text-muted-foreground">No hay eventos próximos programados.</p>;
   }
 
+  const now = Date.now();
+
   return (
     <div className="flex flex-col gap-3">
-      {events.map((event) => (
-        <Card key={event.id}>
-          <CardContent className="flex items-start justify-between gap-4 py-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{event.title}</p>
-                <Badge className={TYPE_BADGE[event.event_type]} variant="secondary">
-                  {TYPE_LABEL[event.event_type]}
-                </Badge>
+      {events.map((event) => {
+        const isPast = new Date(event.start_at).getTime() < now;
+        return (
+          <Card key={event.id} className={isPast ? "opacity-60" : undefined}>
+            <CardContent className="flex items-start justify-between gap-4 py-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{event.title}</p>
+                  <Badge className={TYPE_BADGE[event.event_type]} variant="secondary">
+                    {TYPE_LABEL[event.event_type]}
+                  </Badge>
+                  {isPast && <Badge variant="outline">Ya pasó</Badge>}
+                </div>
+                {event.description && (
+                  <p className="mt-1 text-sm text-muted-foreground">{event.description}</p>
+                )}
               </div>
-              {event.description && (
-                <p className="mt-1 text-sm text-muted-foreground">{event.description}</p>
-              )}
-            </div>
-            <div className="shrink-0 text-right text-sm text-muted-foreground">
-              <p>{formatDateTime(event.start_at)}</p>
-              {event.end_at && <p>hasta {formatDateTime(event.end_at)}</p>}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              <div className="flex shrink-0 flex-col items-end gap-1.5 text-right text-sm text-muted-foreground">
+                <p>{formatDateTime(event.start_at)}</p>
+                {event.end_at && <p>hasta {formatDateTime(event.end_at)}</p>}
+                {!isPast && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => downloadIcsEvent(event)}
+                  >
+                    + Calendario
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

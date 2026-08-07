@@ -6,7 +6,10 @@ import {
   getOwnNotifications,
   getOwnInventory,
 } from "@/lib/data/dashboard";
-import { nextPaymentDate, formatCredits, formatDate, formatDateTime, rankLabel } from "@/lib/format";
+import { getRanks } from "@/lib/data/admin";
+import { getOwnQuizAttempts } from "@/lib/data/quiz";
+import { getOwnEvaluations } from "@/lib/data/training";
+import { nextPaymentDate, formatCredits, formatDate, rankLabel, daysSince } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,7 +19,10 @@ import { ProfileCard } from "@/components/dashboard/profile-card";
 import { TacticalTipCard } from "@/components/dashboard/tactical-tip-card";
 import { OnboardingModal } from "@/components/dashboard/onboarding-modal";
 import { UpcomingEventsCard } from "@/components/dashboard/upcoming-events-card";
-import { getUpcomingEventsForDashboard } from "@/lib/data/attendance";
+import { NotificationCard } from "@/components/dashboard/notification-card";
+import { NextRankCard } from "@/components/dashboard/next-rank-card";
+import { ActivityFeedCard, type ActivityItem } from "@/components/dashboard/activity-feed-card";
+import { getUpcomingEventsForDashboard, getOwnAttendanceStreak } from "@/lib/data/attendance";
 
 export const metadata: Metadata = { title: "Portal — G.O.C.S." };
 
@@ -33,15 +39,55 @@ const TXN_BADGE: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const [profile, transactions, contracts, notifications, inventory, upcomingEvents] =
-    await Promise.all([
-      getCurrentProfile(),
-      getOwnTransactions(),
-      getOwnContracts(),
-      getOwnNotifications(),
-      getOwnInventory(),
-      getUpcomingEventsForDashboard(),
-    ]);
+  const [
+    profile,
+    transactions,
+    contracts,
+    notifications,
+    inventory,
+    upcomingEvents,
+    ranks,
+    quizAttempts,
+    evaluations,
+    attendanceStreak,
+  ] = await Promise.all([
+    getCurrentProfile(),
+    getOwnTransactions(),
+    getOwnContracts(),
+    getOwnNotifications(),
+    getOwnInventory(),
+    getUpcomingEventsForDashboard(),
+    getRanks(),
+    getOwnQuizAttempts(),
+    getOwnEvaluations(),
+    getOwnAttendanceStreak(),
+  ]);
+
+  const activity: ActivityItem[] = [
+    ...transactions
+      .filter((t) => t.type === "Compra Armamento" || t.type === "Compra Vehiculo")
+      .map((t) => ({ id: `txn-${t.id}`, kind: "compra" as const, label: t.detail ?? t.type, at: t.created_at })),
+    ...contracts.map((c) => ({
+      id: `contract-${c.id}`,
+      kind: "contrato" as const,
+      label: c.risk_level ? `Contrato — nivel ${c.risk_level}` : "Contrato",
+      at: c.created_at,
+    })),
+    ...quizAttempts.map((q) => ({
+      id: `quiz-${q.id}`,
+      kind: "quiz" as const,
+      label: `${q.quiz?.title ?? "Quiz"} — ${q.score}/${q.total}`,
+      at: q.completed_at,
+    })),
+    ...evaluations.map((e) => ({
+      id: `eval-${e.id}`,
+      kind: "evaluacion" as const,
+      label: e.skill?.name ?? "Evaluación",
+      at: e.evaluated_at,
+    })),
+  ]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 5);
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,6 +141,25 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
         </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Antigüedad</CardDescription>
+            <CardTitle className="font-heading text-lg">{daysSince(profile.join_date)} días</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Racha de asistencia</CardDescription>
+            <CardTitle className="font-heading text-lg">
+              {attendanceStreak > 0 ? `${attendanceStreak} eventos seguidos` : "Sin racha activa"}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <NextRankCard currentRank={profile.rank} ranks={ranks} />
+        <ActivityFeedCard items={activity} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -144,26 +209,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-heading text-base">Notificaciones</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {notifications.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin notificaciones.</p>
-            ) : (
-              notifications.map((n) => (
-                <div key={n.id} className="rounded-md border border-border/60 p-3">
-                  <p className="text-sm font-medium">{n.title}</p>
-                  {n.body && <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDateTime(n.created_at)}
-                  </p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+        <NotificationCard notifications={notifications} />
       </div>
 
       <InventoryCard items={inventory} />

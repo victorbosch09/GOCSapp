@@ -126,6 +126,13 @@ export type Notification = {
   created_at: string;
 };
 
+export type NotificationRead = {
+  id: string;
+  notification_id: string;
+  profile_id: string;
+  read_at: string;
+};
+
 export type Reward = {
   id: string;
   profile_id: string;
@@ -157,6 +164,7 @@ export type Sanction = {
   applied_by: string | null;
   transaction_id: string | null;
   applied_at: string;
+  expires_at: string | null;
 };
 
 export type EventType = "entrenamiento" | "operacion" | "pago" | "otro";
@@ -361,6 +369,15 @@ export type OperatorRanking = {
   eventos_oficiales_30d: number;
 };
 
+export type QuizLeaderboardEntry = {
+  profile_id: string;
+  callsign: string;
+  squad: string | null;
+  intentos: number;
+  aprobados: number;
+  promedio_pct: number;
+};
+
 export type RosterEntry = {
   id: string;
   callsign: string;
@@ -399,6 +416,7 @@ export type Database = {
       contract_risk_levels: TableDef<ContractRiskLevel, Partial<ContractRiskLevel>>;
       contracts: TableDef<Contract, Partial<Contract>>;
       notifications: TableDef<Notification, Partial<Notification>>;
+      notification_reads: TableDef<NotificationRead, Partial<NotificationRead>>;
       rewards: TableDef<Reward, Partial<Reward>>;
       sanction_types: TableDef<SanctionType, Partial<SanctionType>>;
       sanctions: TableDef<Sanction, Partial<Sanction>>;
@@ -424,6 +442,7 @@ export type Database = {
       skill_completion_stats: ViewDef<SkillCompletionStat>;
       discipline_overview: ViewDef<DisciplineOverview>;
       operator_rankings: ViewDef<OperatorRanking>;
+      quiz_leaderboard: ViewDef<QuizLeaderboardEntry>;
     };
     Functions: {
       purchase_item: {

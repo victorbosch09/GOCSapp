@@ -48,3 +48,24 @@ export async function markOnboarded(): Promise<ActionResult> {
   revalidatePath("/dashboard");
   return { success: true };
 }
+
+/** Autoservicio genuino: la RLS de notification_reads ya restringe el insert a profile_id = auth.uid(), no hace falta el admin client. */
+export async function markNotificationRead(notificationId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado." };
+
+  const { error } = await supabase
+    .from("notification_reads")
+    .upsert(
+      { notification_id: notificationId, profile_id: user.id },
+      { onConflict: "notification_id,profile_id", ignoreDuplicates: true }
+    );
+  if (error) return { error: error.message };
+  // 'layout' revalidates app/(app)/layout.tsx too, so the unread badge in
+  // AppNav updates along with the dashboard list itself.
+  revalidatePath("/dashboard", "layout");
+  return { success: true };
+}

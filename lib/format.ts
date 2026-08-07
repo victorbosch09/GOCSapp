@@ -38,3 +38,9 @@ export function formatDateTime(value: string | Date): string {
 export function rankLabel(profile: ProfileWithRank): string {
   return profile.rank ? `${profile.rank.name} (${profile.rank.abbreviation})` : "Sin rango";
 }
+
+/** Días transcurridos desde una fecha, redondeados hacia abajo. */
+export function daysSince(value: string | Date): number {
+  const date = typeof value === "string" ? new Date(value) : value;
+  return Math.max(0, Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24)));
+}

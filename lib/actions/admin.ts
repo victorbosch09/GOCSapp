@@ -311,6 +311,26 @@ export async function createCatalogItem(
   return { success: true };
 }
 
+export async function duplicateCatalogItem(table: CatalogTable, id: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  if (!CATALOG_TABLES.includes(table)) return { error: "Categoría inválida." };
+  const admin = createAdminClient();
+  const { data: source, error: fetchError } = await admin.from(table).select("*").eq("id", id).single();
+  if (fetchError || !source) return { error: fetchError?.message ?? "Ítem no encontrado." };
+
+  const clone: Record<string, unknown> = { ...source };
+  delete clone.id;
+  delete clone.created_at;
+  clone.name = `${source.name} (copia)`;
+  clone.stock = 0;
+
+  const { error } = await admin.from(table).insert(clone);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/tienda");
+  return { success: true };
+}
+
 export async function deleteCatalogItem(table: CatalogTable, id: string): Promise<ActionResult> {
   await requireCommandStaff();
   if (!CATALOG_TABLES.includes(table)) return { error: "Categoría inválida." };
@@ -555,6 +575,7 @@ export async function applySanction(input: {
   severity: SanctionSeverity;
   description: string;
   amountDeducted: number | null;
+  expiresAt: string | null;
 }): Promise<ActionResult> {
   const staff = await requireCommandStaff();
   const admin = createAdminClient();
@@ -585,6 +606,7 @@ export async function applySanction(input: {
     amount_deducted: input.amountDeducted,
     applied_by: staff.id,
     transaction_id: transactionId,
+    expires_at: input.expiresAt,
   });
   if (sanctionError) return { error: sanctionError.message };
 
@@ -596,7 +618,7 @@ export async function applySanction(input: {
 
 export async function updateSanction(
   sanctionId: string,
-  patch: { severity?: SanctionSeverity; description?: string | null }
+  patch: { severity?: SanctionSeverity; description?: string | null; expires_at?: string | null }
 ): Promise<ActionResult> {
   await requireCommandStaff();
   const admin = createAdminClient();

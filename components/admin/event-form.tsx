@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/actions/admin";
 import { formatDateTime } from "@/lib/format";
+import { downloadIcsEvent } from "@/lib/ics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -167,16 +168,26 @@ function EventRow({ event }: { event: Event }) {
     );
   }
 
+  const isPast = new Date(event.start_at).getTime() < Date.now();
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm">
+    <div
+      className={`flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm ${
+        isPast ? "opacity-60" : ""
+      }`}
+    >
       <div>
         <div className="flex items-center gap-2">
           <p className="font-medium">{event.title}</p>
           <Badge variant="secondary">{event.event_type}</Badge>
+          {isPast ? <Badge variant="outline">Pasado</Badge> : <Badge variant="outline">Próximo</Badge>}
         </div>
         <p className="text-muted-foreground">{formatDateTime(event.start_at)}</p>
       </div>
       <div className="flex shrink-0 gap-2">
+        <Button size="sm" variant="outline" onClick={() => downloadIcsEvent(event)}>
+          .ics
+        </Button>
         <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
           Editar
         </Button>

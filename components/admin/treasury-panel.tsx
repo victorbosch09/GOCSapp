@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   updateTreasurySettings,
@@ -8,6 +8,7 @@ import {
   recordTreasuryAdjustment,
 } from "@/lib/actions/admin";
 import { formatCredits, formatDateTime } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Treasury, TreasuryTransaction, TreasuryTransactionType } from "@/types/database";
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 const TYPE_LABEL: Record<TreasuryTransactionType, string> = {
   ingreso: "Ingreso",
@@ -66,10 +69,32 @@ export function TreasuryPanel({
         <ExpenseForm />
       </div>
 
+      <SummaryCard transactions={transactions} />
+
       <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-base">Movimientos de tesorería</CardTitle>
-          <CardDescription>Últimos {transactions.length} registros.</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-2">
+          <div>
+            <CardTitle className="font-heading text-base">Movimientos de tesorería</CardTitle>
+            <CardDescription>Últimos {transactions.length} registros.</CardDescription>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              downloadCsv(
+                `gocs-tesoreria-${new Date().toISOString().slice(0, 10)}.csv`,
+                transactions.map((t) => ({
+                  fecha: t.created_at,
+                  tipo: t.type,
+                  detalle: t.detail ?? "",
+                  monto: t.amount,
+                  actor: t.actor?.callsign ?? "Sistema",
+                }))
+              )
+            }
+          >
+            Exportar CSV
+          </Button>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
@@ -107,6 +132,51 @@ export function TreasuryPanel({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function SummaryCard({ transactions }: { transactions: TxnRow[] }) {
+  const { income, expense } = useMemo(() => {
+    const cutoff = Date.now() - THIRTY_DAYS_MS;
+    let income = 0;
+    let expense = 0;
+    for (const t of transactions) {
+      if (new Date(t.created_at).getTime() < cutoff) continue;
+      if (t.amount >= 0) income += t.amount;
+      else expense += Math.abs(t.amount);
+    }
+    return { income, expense };
+  }, [transactions]);
+
+  const net = income - expense;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-heading text-base">Últimos 30 días</CardTitle>
+        <CardDescription>
+          Basado en los {transactions.length} movimientos cargados arriba (puede no cubrir 30 días
+          completos si hubo más actividad de la que se muestra).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-xs text-muted-foreground">Ingresos</p>
+          <p className="font-heading text-lg text-emerald-400">+{formatCredits(income)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Egresos</p>
+          <p className="font-heading text-lg text-destructive">-{formatCredits(expense)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Neto</p>
+          <p className={`font-heading text-lg ${net >= 0 ? "text-emerald-400" : "text-destructive"}`}>
+            {net >= 0 ? "+" : ""}
+            {formatCredits(net)}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type TransitionStartFunction } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -34,6 +34,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { downloadCsv } from "@/lib/csv";
 import type { InventoryItem, Profile, Rank, Transaction, TransactionType } from "@/types/database";
 
@@ -49,6 +50,39 @@ const TXN_TYPES: TransactionType[] = [
   "Ajuste Manual",
 ];
 
+type SortKey = "callsign" | "rango" | "escuadra" | "saldo";
+type SortDir = "asc" | "desc";
+
+function SortHeader({
+  label,
+  sortKey,
+  currentKey,
+  currentDir,
+  onSort,
+  className,
+}: {
+  label: string;
+  sortKey: SortKey;
+  currentKey: SortKey;
+  currentDir: SortDir;
+  onSort: (key: SortKey) => void;
+  className?: string;
+}) {
+  const active = currentKey === sortKey;
+  return (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground"
+      >
+        {label}
+        {active && <span className="text-xs">{currentDir === "asc" ? "▲" : "▼"}</span>}
+      </button>
+    </TableHead>
+  );
+}
+
 export function SoldadosTable({
   profiles,
   ranks,
@@ -58,38 +92,117 @@ export function SoldadosTable({
   ranks: Rank[];
   currentProfileId: string;
 }) {
+  const [search, setSearch] = useState("");
+  const [rankFilter, setRankFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("callsign");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function onSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let rows = profiles.filter((p) => {
+      if (q && !p.callsign.toLowerCase().includes(q) && !(p.squad ?? "").toLowerCase().includes(q)) {
+        return false;
+      }
+      if (rankFilter !== "all" && p.rank_id !== rankFilter) return false;
+      if (statusFilter === "aprobado" && !p.approved) return false;
+      if (statusFilter === "pendiente" && p.approved) return false;
+      return true;
+    });
+
+    rows = [...rows].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "callsign") cmp = a.callsign.localeCompare(b.callsign);
+      else if (sortKey === "rango")
+        cmp = (a.rank?.sort_order ?? -1) - (b.rank?.sort_order ?? -1);
+      else if (sortKey === "escuadra") cmp = (a.squad ?? "").localeCompare(b.squad ?? "");
+      else if (sortKey === "saldo") cmp = a.cached_balance - b.cached_balance;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return rows;
+  }, [profiles, search, rankFilter, statusFilter, sortKey, sortDir]);
+
   return (
     <div className="flex flex-col gap-3">
-      <Button
-        size="sm"
-        variant="outline"
-        className="self-end"
-        onClick={() =>
-          downloadCsv(
-            `gocs-soldados-${new Date().toISOString().slice(0, 10)}.csv`,
-            profiles.map((p) => ({
-              callsign: p.callsign,
-              rango: p.rank?.name ?? "",
-              escuadra: p.squad ?? "",
-              saldo: p.cached_balance,
-              aprobado: p.approved ? "si" : "no",
-              mando: p.is_command_staff ? "si" : "no",
-              instructor: p.is_instructor ? "si" : "no",
-              ingreso: p.join_date,
-            }))
-          )
-        }
-      >
-        Exportar CSV
-      </Button>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex-1 min-w-[180px]">
+          <Input
+            placeholder="Buscar por callsign o escuadra..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9"
+          />
+        </div>
+        <Select value={rankFilter} onValueChange={setRankFilter}>
+          <SelectTrigger size="sm" className="w-[170px]">
+            <SelectValue placeholder="Todos los rangos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los rangos</SelectItem>
+            {ranks.map((r) => (
+              <SelectItem key={r.id} value={r.id}>
+                {r.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger size="sm" className="w-[150px]">
+            <SelectValue placeholder="Todos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="aprobado">Aprobados</SelectItem>
+            <SelectItem value="pendiente">Pendientes</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            downloadCsv(
+              `gocs-soldados-${new Date().toISOString().slice(0, 10)}.csv`,
+              filtered.map((p) => ({
+                callsign: p.callsign,
+                rango: p.rank?.name ?? "",
+                escuadra: p.squad ?? "",
+                saldo: p.cached_balance,
+                aprobado: p.approved ? "si" : "no",
+                mando: p.is_command_staff ? "si" : "no",
+                instructor: p.is_instructor ? "si" : "no",
+                ingreso: p.join_date,
+              }))
+            )
+          }
+        >
+          Exportar CSV ({filtered.length})
+        </Button>
+      </div>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Operador</TableHead>
-              <TableHead>Rango</TableHead>
-              <TableHead>Escuadra</TableHead>
-              <TableHead className="text-right">Saldo</TableHead>
+              <SortHeader label="Operador" sortKey="callsign" currentKey={sortKey} currentDir={sortDir} onSort={onSort} />
+              <SortHeader label="Rango" sortKey="rango" currentKey={sortKey} currentDir={sortDir} onSort={onSort} />
+              <SortHeader label="Escuadra" sortKey="escuadra" currentKey={sortKey} currentDir={sortDir} onSort={onSort} />
+              <SortHeader
+                label="Saldo"
+                sortKey="saldo"
+                currentKey={sortKey}
+                currentDir={sortDir}
+                onSort={onSort}
+                className="text-right"
+              />
               <TableHead>Estado</TableHead>
               <TableHead>Mando</TableHead>
               <TableHead>Instructor</TableHead>
@@ -97,9 +210,17 @@ export function SoldadosTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {profiles.map((p) => (
-              <SoldadoRow key={p.id} profile={p} ranks={ranks} currentProfileId={currentProfileId} />
-            ))}
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="py-6 text-center text-sm text-muted-foreground">
+                  Ningún soldado coincide con el filtro.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((p) => (
+                <SoldadoRow key={p.id} profile={p} ranks={ranks} currentProfileId={currentProfileId} />
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -238,33 +359,90 @@ function SoldadoRow({
         <Button size="sm" variant="outline" asChild>
           <Link href={`/admin/soldados/${profile.id}`}>Ver portal</Link>
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          title="Copiar ID interno"
+          onClick={() => {
+            navigator.clipboard.writeText(profile.id);
+            toast.success("ID copiado.");
+          }}
+        >
+          Copiar ID
+        </Button>
         <AdjustmentDialog profileId={profile.id} callsign={profile.callsign} />
         <LedgerDialog profileId={profile.id} callsign={profile.callsign} />
         <InventoryDialog profileId={profile.id} callsign={profile.callsign} />
         {profile.id !== currentProfileId && (
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={pending}
-            onClick={() => {
-              if (
-                !confirm(
-                  `¿Borrar definitivamente la cuenta de ${profile.callsign}? Esto elimina su perfil, saldo, historial y acceso. No se puede deshacer.`
-                )
-              )
-                return;
-              startTransition(async () => {
-                const result = await deleteProfile(profile.id);
-                if (result?.error) toast.error(result.error);
-                else toast.success("Cuenta borrada.");
-              });
-            }}
-          >
-            Borrar cuenta
-          </Button>
+          <DeleteAccountDialog profileId={profile.id} callsign={profile.callsign} pending={pending} startTransition={startTransition} />
         )}
       </TableCell>
     </TableRow>
+  );
+}
+
+function DeleteAccountDialog({
+  profileId,
+  callsign,
+  pending,
+  startTransition,
+}: {
+  profileId: string;
+  callsign: string;
+  pending: boolean;
+  startTransition: TransitionStartFunction;
+}) {
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const canDelete = confirmText.trim() === callsign;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) setConfirmText("");
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="sm" variant="destructive" disabled={pending}>
+          Borrar cuenta
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Borrar cuenta — {callsign}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Esto elimina el perfil, saldo, historial y acceso de <strong>{callsign}</strong>. No se puede
+          deshacer. Escribí el callsign exacto para confirmar.
+        </p>
+        <Input
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder={callsign}
+          autoFocus
+        />
+        <DialogFooter>
+          <Button
+            variant="destructive"
+            disabled={!canDelete || pending}
+            onClick={() => {
+              startTransition(async () => {
+                const result = await deleteProfile(profileId);
+                if (result?.error) toast.error(result.error);
+                else {
+                  toast.success("Cuenta borrada.");
+                  setOpen(false);
+                }
+              });
+            }}
+          >
+            {pending ? "Borrando..." : "Borrar definitivamente"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -329,6 +507,16 @@ function AdjustmentDialog({ profileId, callsign }: { profileId: string; callsign
   );
 }
 
+function RowSkeletons({ count = 4 }: { count?: number }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className="h-14 w-full" />
+      ))}
+    </div>
+  );
+}
+
 function LedgerDialog({ profileId, callsign }: { profileId: string; callsign: string }) {
   const [open, setOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
@@ -356,7 +544,7 @@ function LedgerDialog({ profileId, callsign }: { profileId: string; callsign: st
           <DialogTitle>Libro de movimientos — {callsign}</DialogTitle>
         </DialogHeader>
         {transactions === null ? (
-          <p className="text-sm text-muted-foreground">Cargando...</p>
+          <RowSkeletons />
         ) : transactions.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sin movimientos.</p>
         ) : (
@@ -401,7 +589,7 @@ function InventoryDialog({ profileId, callsign }: { profileId: string; callsign:
           siempre está en tu Portal (/dashboard), separado de esta vista de mando.
         </p>
         {items === null ? (
-          <p className="text-sm text-muted-foreground">Cargando...</p>
+          <RowSkeletons />
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sin ítems comprados todavía.</p>
         ) : (

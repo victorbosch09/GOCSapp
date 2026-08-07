@@ -25,6 +25,18 @@ export async function getQuizWithQuestions(quizId: string) {
   return { quiz: quiz as Quiz | null, questions: (questions ?? []) as QuizQuestion[] };
 }
 
+/** Vista agregada (sin puntajes por pregunta) — visible para todo aprobado. */
+export async function getQuizLeaderboard(limit = 10) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("quiz_leaderboard")
+    .select("*")
+    .order("aprobados", { ascending: false })
+    .order("promedio_pct", { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
+
 export async function getOwnQuizAttempts() {
   const supabase = await createClient();
   const {

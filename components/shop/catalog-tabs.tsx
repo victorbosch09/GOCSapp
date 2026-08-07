@@ -8,9 +8,14 @@ import { purchaseItem } from "@/lib/actions/shop";
 import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { CatalogItem, Vehicle } from "@/types/database";
+
+const NEW_ITEM_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const LOW_STOCK_THRESHOLD = 2;
 
 type Table = "weapons" | "equipment" | "accessories" | "vehicles";
 
@@ -43,6 +48,8 @@ export function CatalogTabs({
   myRankSortOrder: number;
 }) {
   const [data, setData] = useState(initial);
+  const [search, setSearch] = useState("");
+  const [hideOutOfStock, setHideOutOfStock] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -76,41 +83,66 @@ export function CatalogTabs({
     };
   }, []);
 
+  const q = search.trim().toLowerCase();
+
   return (
-    <Tabs defaultValue="weapons">
-      <TabsList>
-        {TABS.map((t) => (
-          <TabsTrigger key={t.table} value={t.table}>
-            {t.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      {TABS.map(({ table }) => (
-        <TabsContent key={table} value={table} className="flex flex-col gap-6">
-          {data[table].length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin ítems cargados todavía.</p>
-          ) : (
-            groupByCategory(data[table]).map(([category, items]) => (
-              <div key={category}>
-                <h3 className="font-heading mb-3 text-sm text-muted-foreground">{category}</h3>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {items.map((item) => (
-                    <ItemCard
-                      key={item.id}
-                      item={item}
-                      table={table}
-                      balance={balance}
-                      canBuy={canBuy}
-                      myRankSortOrder={myRankSortOrder}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </TabsContent>
-      ))}
-    </Tabs>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          placeholder="Buscar ítem..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-9 max-w-xs"
+        />
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Checkbox checked={hideOutOfStock} onCheckedChange={(v) => setHideOutOfStock(v === true)} />
+          Ocultar sin stock
+        </label>
+      </div>
+      <Tabs defaultValue="weapons">
+        <TabsList>
+          {TABS.map((t) => (
+            <TabsTrigger key={t.table} value={t.table}>
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {TABS.map(({ table }) => {
+          const visible = data[table].filter(
+            (item) =>
+              (!q || item.name.toLowerCase().includes(q) || item.category.toLowerCase().includes(q)) &&
+              (!hideOutOfStock || item.stock > 0)
+          );
+          return (
+            <TabsContent key={table} value={table} className="flex flex-col gap-6">
+              {visible.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {data[table].length === 0 ? "Sin ítems cargados todavía." : "Nada coincide con el filtro."}
+                </p>
+              ) : (
+                groupByCategory(visible).map(([category, items]) => (
+                  <div key={category}>
+                    <h3 className="font-heading mb-3 text-sm text-muted-foreground">{category}</h3>
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                      {items.map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          table={table}
+                          balance={balance}
+                          canBuy={canBuy}
+                          myRankSortOrder={myRankSortOrder}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </TabsContent>
+          );
+        })}
+      </Tabs>
+    </div>
   );
 }
 
@@ -136,6 +168,8 @@ function ItemCard({
   const affordable = balance >= item.price;
   const rankOk = minRank == null || myRankSortOrder >= minRank;
   const inStock = item.stock > 0;
+  const lowStock = inStock && item.stock <= LOW_STOCK_THRESHOLD;
+  const isNew = Date.now() - new Date(item.created_at).getTime() < NEW_ITEM_WINDOW_MS;
   const disabled = pending || !canBuy || !inStock || !affordable || !rankOk;
 
   function handleBuy() {
@@ -169,9 +203,19 @@ function ItemCard({
       )}
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm font-medium leading-snug">{item.name}</CardTitle>
-          <Badge variant={inStock ? "secondary" : "outline"} className="shrink-0">
-            {inStock ? `Disponible (${item.stock})` : "Sin stock"}
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-sm font-medium leading-snug">{item.name}</CardTitle>
+            {isNew && (
+              <Badge className="bg-emerald-500/15 text-emerald-400 shrink-0" variant="secondary">
+                Nuevo
+              </Badge>
+            )}
+          </div>
+          <Badge
+            variant={inStock ? "secondary" : "outline"}
+            className={`shrink-0 ${lowStock ? "bg-amber-500/15 text-amber-400" : ""}`}
+          >
+            {inStock ? (lowStock ? `Últimas unidades (${item.stock})` : `Disponible (${item.stock})`) : "Sin stock"}
           </Badge>
         </div>
       </CardHeader>
