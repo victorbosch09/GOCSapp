@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   approveProfile,
+  approveAllPending,
   updateCallsign,
   updateProfileRank,
   updateProfileSquad,
@@ -102,6 +103,9 @@ export function SoldadosTable({
   const [sortKey, setSortKey] = useState<SortKey>("callsign");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
+  const [bulkPending, startBulkTransition] = useTransition();
+  const confirm = useConfirm();
+  const pendingCount = profiles.filter((p) => !p.approved).length;
 
   function onSort(key: SortKey) {
     if (key === sortKey) {
@@ -184,6 +188,28 @@ export function SoldadosTable({
             <SelectItem value="pendiente">Pendientes</SelectItem>
           </SelectContent>
         </Select>
+        {pendingCount > 0 && (
+          <Button
+            size="sm"
+            disabled={bulkPending}
+            onClick={async () => {
+              if (
+                !(await confirm({
+                  title: `¿Aprobar a los ${pendingCount} operadores pendientes?`,
+                  description: "Todos pasan a aprobados de una sola vez.",
+                }))
+              )
+                return;
+              startBulkTransition(async () => {
+                const result = await approveAllPending();
+                if (result?.error) toast.error(result.error);
+                else toast.success(`${result.count ?? 0} operadores aprobados.`);
+              });
+            }}
+          >
+            {bulkPending ? "Aprobando..." : `Aprobar pendientes (${pendingCount})`}
+          </Button>
+        )}
         <Button
           size="sm"
           variant="outline"

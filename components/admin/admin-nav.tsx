@@ -7,7 +7,10 @@ import { cn } from "@/lib/utils";
 const GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
   {
     label: "General",
-    links: [{ href: "/admin", label: "Resumen" }],
+    links: [
+      { href: "/admin", label: "Resumen" },
+      { href: "/admin/auditoria", label: "Auditoría" },
+    ],
   },
   {
     label: "Roster",

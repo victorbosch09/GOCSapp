@@ -42,6 +42,12 @@ export async function getPayrollSettings() {
   return data;
 }
 
+export async function getIntegrationSettings() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("integration_settings").select("*").eq("id", true).single();
+  return data;
+}
+
 export async function getPayrollRuns() {
   const supabase = await createClient();
   const { data } = await supabase
@@ -98,13 +104,13 @@ export async function getRecentContracts() {
   return (data ?? []) as unknown as (Contract & { profile: { callsign: string } | null })[];
 }
 
-export async function getAuditLog() {
+export async function getAuditLog(limit = 50) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("admin_audit_log")
     .select("*, actor:profiles!admin_audit_log_actor_id_fkey(callsign), target:profiles!admin_audit_log_target_profile_id_fkey(callsign)")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(limit);
   return (data ?? []) as unknown as (import("@/types/database").AdminAuditLog & {
     actor: { callsign: string } | null;
     target: { callsign: string } | null;

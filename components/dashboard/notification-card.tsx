@@ -1,7 +1,8 @@
 "use client";
 
 import { useTransition } from "react";
-import { markNotificationRead } from "@/lib/actions/profile";
+import { toast } from "sonner";
+import { markNotificationRead, markAllNotificationsRead } from "@/lib/actions/profile";
 import { formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +11,29 @@ import type { Notification } from "@/types/database";
 type NotificationWithRead = Notification & { read: boolean };
 
 export function NotificationCard({ notifications }: { notifications: NotificationWithRead[] }) {
+  const [pending, startTransition] = useTransition();
+  const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
         <CardTitle className="font-heading text-base">Notificaciones</CardTitle>
+        {unreadIds.length > 0 && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await markAllNotificationsRead(unreadIds);
+                if (result?.error) toast.error(result.error);
+              })
+            }
+          >
+            {pending ? "..." : "Marcar todas leídas"}
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {notifications.length === 0 ? (

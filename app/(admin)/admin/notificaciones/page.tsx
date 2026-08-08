@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
-import { getAllProfiles, getRecentNotifications } from "@/lib/data/admin";
+import { getAllProfiles, getRecentNotifications, getIntegrationSettings } from "@/lib/data/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { NotificationForm } from "@/components/admin/notification-form";
 import { NotificationList } from "@/components/admin/notification-list";
+import { DiscordSettingsForm } from "@/components/admin/discord-settings-form";
 
 export const metadata: Metadata = { title: "Notificaciones — Mando G.O.C.S." };
 
 export default async function AdminNotificacionesPage() {
-  const [profiles, notifications] = await Promise.all([getAllProfiles(), getRecentNotifications()]);
+  const [profiles, notifications, integrationSettings] = await Promise.all([
+    getAllProfiles(),
+    getRecentNotifications(),
+    getIntegrationSettings(),
+  ]);
   const squads = Array.from(new Set(profiles.map((p) => p.squad).filter((s): s is string => !!s)));
 
   return (
@@ -31,6 +36,15 @@ export default async function AdminNotificacionesPage() {
         </CardHeader>
         <CardContent>
           <NotificationList notifications={notifications} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Integración con Discord</CardTitle>
+          <CardDescription>Espejo opcional de eventos y notificaciones en un canal del servidor.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DiscordSettingsForm settings={integrationSettings} />
         </CardContent>
       </Card>
     </div>

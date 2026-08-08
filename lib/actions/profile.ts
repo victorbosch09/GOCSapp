@@ -89,3 +89,22 @@ export async function markNotificationRead(notificationId: string): Promise<Acti
   revalidatePath("/dashboard", "layout");
   return { success: true };
 }
+
+export async function markAllNotificationsRead(notificationIds: string[]): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado." };
+  if (notificationIds.length === 0) return { success: true };
+
+  const { error } = await supabase
+    .from("notification_reads")
+    .upsert(
+      notificationIds.map((id) => ({ notification_id: id, profile_id: user.id })),
+      { onConflict: "notification_id,profile_id", ignoreDuplicates: true }
+    );
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard", "layout");
+  return { success: true };
+}

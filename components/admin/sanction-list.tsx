@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { updateSanction, deleteSanction } from "@/lib/actions/admin";
 import { useNow } from "@/lib/hooks/use-now";
 import { useConfirm } from "@/components/ui/confirm-provider";
+import { downloadCsv } from "@/lib/csv";
 import { formatCredits, formatDate, formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,26 @@ export function SanctionList({ sanctions }: { sanctions: SanctionWithProfile[] }
   }
   return (
     <div className="flex flex-col gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        className="self-end"
+        onClick={() =>
+          downloadCsv(
+            `gocs-sanciones-${new Date().toISOString().slice(0, 10)}.csv`,
+            sanctions.map((s) => ({
+              fecha: s.applied_at,
+              soldado: s.profile?.callsign ?? "",
+              severidad: s.severity,
+              descripcion: s.description ?? "",
+              descuento: s.amount_deducted ?? "",
+              vence: s.expires_at ?? "",
+            }))
+          )
+        }
+      >
+        Exportar CSV ({sanctions.length})
+      </Button>
       {sanctions.map((s) => (
         <SanctionRow key={s.id} sanction={s} />
       ))}

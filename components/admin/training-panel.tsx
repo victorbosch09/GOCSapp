@@ -10,6 +10,7 @@ import {
   deleteTrainingMaterial,
 } from "@/lib/actions/training";
 import { useConfirm } from "@/components/ui/confirm-provider";
+import { downloadCsv } from "@/lib/csv";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,8 +59,29 @@ export function TrainingPanel({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle className="font-heading text-base">Evaluaciones recientes</CardTitle>
+          {evaluations.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                downloadCsv(
+                  `gocs-evaluaciones-${new Date().toISOString().slice(0, 10)}.csv`,
+                  evaluations.map((e) => ({
+                    fecha: e.evaluated_at,
+                    soldado: e.profile?.callsign ?? "",
+                    habilidad: e.skill?.name ?? "",
+                    resultado: e.result,
+                    puntaje: e.score ?? "",
+                    notas: e.notes ?? "",
+                  }))
+                )
+              }
+            >
+              Exportar CSV ({evaluations.length})
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {evaluations.length === 0 ? (

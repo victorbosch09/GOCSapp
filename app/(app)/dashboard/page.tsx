@@ -23,6 +23,8 @@ import { NotificationCard } from "@/components/dashboard/notification-card";
 import { NextRankCard } from "@/components/dashboard/next-rank-card";
 import { ActivityFeedCard, type ActivityItem } from "@/components/dashboard/activity-feed-card";
 import { getUpcomingEventsForDashboard, getOwnAttendanceStreak } from "@/lib/data/attendance";
+import { computeAchievements } from "@/lib/achievements";
+import { AchievementsCard } from "@/components/dashboard/achievements-card";
 
 export const metadata: Metadata = { title: "Portal — G.O.C.S." };
 
@@ -88,6 +90,16 @@ export default async function DashboardPage() {
   ]
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, 5);
+
+  const achievements = computeAchievements({
+    joinDate: profile.join_date,
+    isCommandStaff: profile.is_command_staff,
+    isInstructor: profile.is_instructor,
+    quizAttempts: quizAttempts.map((q) => ({ score: q.score, total: q.total })),
+    attendanceStreak,
+    contractsCount: contracts.length,
+    inventoryCount: inventory.length,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -161,6 +173,8 @@ export default async function DashboardPage() {
         <NextRankCard currentRank={profile.rank} ranks={ranks} />
         <ActivityFeedCard items={activity} />
       </div>
+
+      <AchievementsCard achievements={achievements} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">

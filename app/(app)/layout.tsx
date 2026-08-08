@@ -3,6 +3,7 @@ import { getUnreadNotificationCount } from "@/lib/data/dashboard";
 import { AppNav } from "@/components/app-nav";
 import { PendingApprovalScreen } from "@/components/pending-approval-screen";
 import { RealtimeListener } from "@/components/realtime-listener";
+import { CommandPalette } from "@/components/command-palette";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
@@ -23,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         Saltar al contenido
       </a>
       <RealtimeListener profileId={profile.id} />
+      <CommandPalette isCommandStaff={profile.is_command_staff} />
       <AppNav isCommandStaff={profile.is_command_staff} unreadCount={unreadCount} />
       <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         {children}

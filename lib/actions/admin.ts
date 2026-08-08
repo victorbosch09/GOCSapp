@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireCommandStaff } from "@/lib/data/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { postToDiscord } from "@/lib/discord";
+import { formatDateTime } from "@/lib/format";
 import type { EventType, NotificationTarget, SanctionSeverity, TransactionType } from "@/types/database";
 
 type ActionResult = { error?: string; success?: true };
@@ -37,6 +39,21 @@ export async function approveProfile(profileId: string): Promise<ActionResult> {
   revalidatePath("/admin/soldados");
   revalidatePath("/equipo");
   return { success: true };
+}
+
+export async function approveAllPending(): Promise<ActionResult & { count?: number }> {
+  const staff = await requireCommandStaff();
+  const admin = createAdminClient();
+  const { data: pending } = await admin.from("profiles").select("id").eq("approved", false);
+  const ids = (pending ?? []).map((p) => p.id);
+  if (ids.length === 0) return { success: true, count: 0 };
+
+  const { error } = await admin.from("profiles").update({ approved: true }).in("id", ids);
+  if (error) return { error: error.message };
+  await logAudit(staff.id, "bulk_approve", null, `${ids.length} operadores aprobados en lote`);
+  revalidatePath("/admin/soldados");
+  revalidatePath("/equipo");
+  return { success: true, count: ids.length };
 }
 
 export async function updateProfileRank(profileId: string, rankId: string): Promise<ActionResult> {
@@ -475,6 +492,7 @@ export async function sendNotification(input: {
   });
 
   if (error) return { error: error.message };
+  await postToDiscord(`📢 **${input.title}**${input.body ? `\n${input.body}` : ""}`, "notification");
   revalidatePath("/admin/notificaciones");
   revalidatePath("/equipo");
   return { success: true };
@@ -753,6 +771,25 @@ export async function updatePayrollSettings(patch: {
   return { success: true };
 }
 
+export async function updateIntegrationSettings(patch: {
+  discord_webhook_url: string | null;
+  notify_on_event: boolean;
+  notify_on_notification: boolean;
+}): Promise<ActionResult> {
+  const staff = await requireCommandStaff();
+  if (patch.discord_webhook_url && !patch.discord_webhook_url.startsWith("https://discord.com/api/webhooks/")) {
+    return { error: "Eso no parece una URL de webhook de Discord válida." };
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("integration_settings")
+    .update({ ...patch, updated_by: staff.id, updated_at: new Date().toISOString() })
+    .eq("id", true);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/notificaciones");
+  return { success: true };
+}
+
 export async function runPayrollNow(): Promise<ActionResult> {
   const staff = await requireCommandStaff();
   const admin = createAdminClient();
@@ -787,6 +824,10 @@ export async function createEvent(input: {
   });
 
   if (error) return { error: error.message };
+  await postToDiscord(
+    `📅 **Nuevo evento:** ${input.title} — ${formatDateTime(new Date(input.startAt).toISOString())}`,
+    "event"
+  );
   revalidatePath("/admin/calendario");
   revalidatePath("/calendario");
   return { success: true };

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateReward, deleteReward } from "@/lib/actions/admin";
 import { useConfirm } from "@/components/ui/confirm-provider";
+import { downloadCsv } from "@/lib/csv";
 import { formatCredits, formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,25 @@ export function RewardList({ rewards }: { rewards: RewardWithProfile[] }) {
   }
   return (
     <div className="flex flex-col gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        className="self-end"
+        onClick={() =>
+          downloadCsv(
+            `gocs-recompensas-${new Date().toISOString().slice(0, 10)}.csv`,
+            rewards.map((r) => ({
+              fecha: r.awarded_at,
+              soldado: r.profile?.callsign ?? "",
+              titulo: r.title,
+              descripcion: r.description ?? "",
+              monto: r.amount ?? "",
+            }))
+          )
+        }
+      >
+        Exportar CSV ({rewards.length})
+      </Button>
       {rewards.map((r) => (
         <RewardRow key={r.id} reward={r} />
       ))}

@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { deleteContract } from "@/lib/actions/admin";
 import { useConfirm } from "@/components/ui/confirm-provider";
+import { downloadCsv } from "@/lib/csv";
 import { formatCredits, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,25 @@ export function ContractList({ contracts }: { contracts: ContractWithProfile[] }
   }
   return (
     <div className="flex flex-col gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        className="self-end"
+        onClick={() =>
+          downloadCsv(
+            `gocs-contratos-${new Date().toISOString().slice(0, 10)}.csv`,
+            contracts.map((c) => ({
+              fecha: c.contract_date,
+              soldado: c.profile?.callsign ?? "",
+              nivel_riesgo: c.risk_level ?? "",
+              total: c.total_amount,
+              notas: c.notes ?? "",
+            }))
+          )
+        }
+      >
+        Exportar CSV ({contracts.length})
+      </Button>
       {contracts.map((c) => (
         <ContractRow key={c.id} contract={c} />
       ))}

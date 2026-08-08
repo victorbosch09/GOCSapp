@@ -265,6 +265,15 @@ export type PayrollSettings = {
   updated_by: string | null;
 };
 
+export type IntegrationSettings = {
+  id: boolean;
+  discord_webhook_url: string | null;
+  notify_on_event: boolean;
+  notify_on_notification: boolean;
+  updated_at: string;
+  updated_by: string | null;
+};
+
 export type AdminAuditLog = {
   id: string;
   actor_id: string | null;
@@ -436,6 +445,7 @@ export type Database = {
       quiz_attempts: TableDef<QuizAttempt, Partial<QuizAttempt>>;
       treasury: TableDef<Treasury, Partial<Treasury>>;
       treasury_transactions: TableDef<TreasuryTransaction, Partial<TreasuryTransaction>>;
+      integration_settings: TableDef<IntegrationSettings, Partial<IntegrationSettings>>;
     };
     Views: {
       team_overview: ViewDef<TeamOverview>;
