@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createQuiz, deleteQuiz, updateQuizBonus } from "@/lib/actions/quiz";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -207,6 +208,7 @@ export function QuizBuilder({ skills, quizzes }: { skills: Skill[]; quizzes: Qui
 function QuizRow({ quiz }: { quiz: QuizWithMeta }) {
   const [pending, startTransition] = useTransition();
   const [bonus, setBonus] = useState(String(quiz.bonus_amount));
+  const confirm = useConfirm();
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm">
@@ -254,8 +256,15 @@ function QuizRow({ quiz }: { quiz: QuizWithMeta }) {
           size="sm"
           variant="outline"
           disabled={pending}
-          onClick={() => {
-            if (!confirm("¿Borrar este quiz? Se pierden sus preguntas.")) return;
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: "¿Borrar este quiz?",
+                description: "Se pierden sus preguntas.",
+                destructive: true,
+              }))
+            )
+              return;
             startTransition(async () => {
               const result = await deleteQuiz(quiz.id);
               if (result?.error) toast.error(result.error);

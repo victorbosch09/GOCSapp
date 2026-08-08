@@ -54,3 +54,14 @@ export const requireInstructorOrStaff = cache(async (): Promise<ProfileWithRank>
   }
   return profile;
 });
+
+/**
+ * True only on a fresh deployment with zero command-staff accounts. Drives
+ * the one-time "claim founder access" card on the dashboard so a brand-new
+ * clan doesn't need a hand-run SQL update to get its first admin.
+ */
+export const noAdminExistsYet = cache(async (): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("any_command_staff_exists");
+  return data === false;
+});

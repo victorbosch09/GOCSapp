@@ -65,7 +65,7 @@ export function PayrollSettingsForm({ settings }: { settings: PayrollSettings })
         <div>
           <p className="text-sm font-medium">Cron automático semanal habilitado</p>
           <p className="text-xs text-muted-foreground">
-            El botón manual "Ejecutar pago semanal ahora" siempre funciona, esté esto prendido o no.
+            El botón manual &quot;Ejecutar pago semanal ahora&quot; siempre funciona, esté esto prendido o no.
           </p>
         </div>
         <Switch checked={autoRunEnabled} onCheckedChange={setAutoRunEnabled} />

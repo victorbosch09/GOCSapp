@@ -5,6 +5,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { purchaseItem } from "@/lib/actions/shop";
+import { useNow } from "@/lib/hooks/use-now";
 import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -169,7 +170,8 @@ function ItemCard({
   const rankOk = minRank == null || myRankSortOrder >= minRank;
   const inStock = item.stock > 0;
   const lowStock = inStock && item.stock <= LOW_STOCK_THRESHOLD;
-  const isNew = Date.now() - new Date(item.created_at).getTime() < NEW_ITEM_WINDOW_MS;
+  const now = useNow();
+  const isNew = now - new Date(item.created_at).getTime() < NEW_ITEM_WINDOW_MS;
   const disabled = pending || !canBuy || !inStock || !affordable || !rankOk;
 
   function handleBuy() {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useNow } from "@/lib/hooks/use-now";
 import { formatDateTime } from "@/lib/format";
 import { downloadIcsEvent } from "@/lib/ics";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,11 +54,11 @@ export function EventList({ initial }: { initial: Event[] }) {
     };
   }, []);
 
+  const now = useNow();
+
   if (events.length === 0) {
     return <p className="text-sm text-muted-foreground">No hay eventos próximos programados.</p>;
   }
-
-  const now = Date.now();
 
   return (
     <div className="flex flex-col gap-3">

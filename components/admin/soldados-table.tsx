@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition, type TransitionStartFunction } from "react";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -35,10 +36,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { downloadCsv } from "@/lib/csv";
 import type { InventoryItem, Profile, Rank, Transaction, TransactionType } from "@/types/database";
 
 type ProfileRow = Profile & { rank: Rank | null };
+
+const PAGE_SIZE = 25;
 
 const TXN_TYPES: TransactionType[] = [
   "Sueldo",
@@ -97,6 +101,7 @@ export function SoldadosTable({
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("callsign");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
 
   function onSort(key: SortKey) {
     if (key === sortKey) {
@@ -131,6 +136,19 @@ export function SoldadosTable({
 
     return rows;
   }, [profiles, search, rankFilter, statusFilter, sortKey, sortDir]);
+
+  // Reset to page 1 when the filters change, following React's "adjust
+  // state during render" pattern instead of a useEffect (avoids an extra
+  // render pass just to reset pagination).
+  const filterKey = `${search}|${rankFilter}|${statusFilter}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setPage(1);
+  }
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-3">
@@ -217,13 +235,19 @@ export function SoldadosTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((p) => (
+              paged.map((p) => (
                 <SoldadoRow key={p.id} profile={p} ranks={ranks} currentProfileId={currentProfileId} />
               ))
             )}
           </TableBody>
         </Table>
       </div>
+      <PaginationControls
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        totalLabel={`${filtered.length} operador${filtered.length === 1 ? "" : "es"}`}
+      />
     </div>
   );
 }
@@ -624,6 +648,7 @@ function TransactionRow({ txn, onChanged }: { txn: Transaction; onChanged: () =>
   const [amount, setAmount] = useState(String(txn.amount));
   const [detail, setDetail] = useState(txn.detail ?? "");
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   if (!editing) {
     return (
@@ -649,8 +674,15 @@ function TransactionRow({ txn, onChanged }: { txn: Transaction; onChanged: () =>
             size="sm"
             variant="outline"
             disabled={pending}
-            onClick={() => {
-              if (!confirm("¿Borrar este movimiento? El saldo se recalcula automáticamente.")) return;
+            onClick={async () => {
+              if (
+                !(await confirm({
+                  title: "¿Borrar este movimiento?",
+                  description: "El saldo se recalcula automáticamente.",
+                  destructive: true,
+                }))
+              )
+                return;
               startTransition(async () => {
                 const result = await deleteTransaction(txn.id);
                 if (result?.error) toast.error(result.error);

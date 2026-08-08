@@ -11,6 +11,7 @@ import {
   deleteCatalogItem,
 } from "@/lib/actions/admin";
 import { resizeToRectPng } from "@/lib/resize-image";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -203,6 +204,7 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const confirm = useConfirm();
 
   function save(patch: { price?: number; stock?: number; min_rank_sort_order?: number | null }) {
     startTransition(async () => {
@@ -336,8 +338,8 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
           size="sm"
           variant="outline"
           disabled={pending}
-          onClick={() => {
-            if (!confirm(`¿Borrar "${item.name}" del catálogo?`)) return;
+          onClick={async () => {
+            if (!(await confirm({ title: `¿Borrar "${item.name}" del catálogo?`, destructive: true }))) return;
             startTransition(async () => {
               const result = await deleteCatalogItem(table, item.id);
               if (result?.error) toast.error(result.error);

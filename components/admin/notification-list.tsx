@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { deleteNotification } from "@/lib/actions/admin";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
 
 function NotificationRow({ notification }: { notification: Notification }) {
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm">
@@ -44,8 +46,8 @@ function NotificationRow({ notification }: { notification: Notification }) {
         size="sm"
         variant="outline"
         disabled={pending}
-        onClick={() => {
-          if (!confirm("¿Borrar esta notificación?")) return;
+        onClick={async () => {
+          if (!(await confirm({ title: "¿Borrar esta notificación?", destructive: true }))) return;
           startTransition(async () => {
             const result = await deleteNotification(notification.id);
             if (result?.error) toast.error(result.error);

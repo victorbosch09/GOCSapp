@@ -473,6 +473,14 @@ export type Database = {
         };
         Returns: Contract[];
       };
+      any_command_staff_exists: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      bootstrap_first_admin: {
+        Args: Record<string, never>;
+        Returns: void;
+      };
     };
   };
 };

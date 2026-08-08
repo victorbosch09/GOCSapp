@@ -1,8 +1,15 @@
 import { GocsPatch } from "@/components/brand/logo";
 import { logout } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
+import { FounderClaimCard } from "@/components/dashboard/founder-claim-card";
 
-export function PendingApprovalScreen({ callsign }: { callsign: string }) {
+export function PendingApprovalScreen({
+  callsign,
+  showFounderClaim,
+}: {
+  callsign: string;
+  showFounderClaim: boolean;
+}) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gocs-carbon px-4 text-center">
       <GocsPatch size={72} />
@@ -13,6 +20,11 @@ export function PendingApprovalScreen({ callsign }: { callsign: string }) {
           tu ingreso antes de que puedas acceder al portal de operaciones.
         </p>
       </div>
+      {showFounderClaim && (
+        <div className="w-full max-w-md text-left">
+          <FounderClaimCard />
+        </div>
+      )}
       <form action={logout}>
         <Button type="submit" variant="outline">
           Cerrar sesión

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { downloadCsv } from "@/lib/csv";
 import { formatCredits, formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +22,8 @@ const TXN_BADGE: Record<string, string> = {
   Sancion: "bg-destructive/15 text-destructive",
   "Ajuste Manual": "bg-muted text-muted-foreground",
 };
+
+const PAGE_SIZE = 25;
 
 const TXN_TYPES: TransactionType[] = [
   "Sueldo",
@@ -74,6 +77,7 @@ export function MovimientosTable({ transactions }: { transactions: TxnWithProfil
   const [dateTo, setDateTo] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("fecha");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(1);
 
   function onSort(key: SortKey) {
     if (key === sortKey) {
@@ -107,6 +111,19 @@ export function MovimientosTable({ transactions }: { transactions: TxnWithProfil
 
     return rows;
   }, [transactions, typeFilter, dateFrom, dateTo, sortKey, sortDir]);
+
+  // Reset to page 1 when the filters change, following React's "adjust
+  // state during render" pattern instead of a useEffect (avoids an extra
+  // render pass just to reset pagination).
+  const filterKey = `${typeFilter}|${dateFrom}|${dateTo}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setPage(1);
+  }
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-3">
@@ -178,7 +195,7 @@ export function MovimientosTable({ transactions }: { transactions: TxnWithProfil
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((t) => (
+              paged.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
                     {formatDateTime(t.created_at)}
@@ -204,6 +221,12 @@ export function MovimientosTable({ transactions }: { transactions: TxnWithProfil
           </TableBody>
         </Table>
       </div>
+      <PaginationControls
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        totalLabel={`${filtered.length} movimiento${filtered.length === 1 ? "" : "s"}`}
+      />
     </div>
   );
 }

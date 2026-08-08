@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/actions/admin";
+import { useNow } from "@/lib/hooks/use-now";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatDateTime } from "@/lib/format";
 import { downloadIcsEvent } from "@/lib/ics";
 import { Button } from "@/components/ui/button";
@@ -113,6 +115,8 @@ function EventRow({ event }: { event: Event }) {
   const [startAt, setStartAt] = useState(toLocalInput(event.start_at));
   const [endAt, setEndAt] = useState(event.end_at ? toLocalInput(event.end_at) : "");
   const [pending, startTransition] = useTransition();
+  const now = useNow();
+  const confirm = useConfirm();
 
   if (editing) {
     return (
@@ -168,7 +172,7 @@ function EventRow({ event }: { event: Event }) {
     );
   }
 
-  const isPast = new Date(event.start_at).getTime() < Date.now();
+  const isPast = new Date(event.start_at).getTime() < now;
 
   return (
     <div
@@ -195,8 +199,8 @@ function EventRow({ event }: { event: Event }) {
           size="sm"
           variant="outline"
           disabled={pending}
-          onClick={() => {
-            if (!confirm("¿Borrar este evento?")) return;
+          onClick={async () => {
+            if (!(await confirm({ title: "¿Borrar este evento?", destructive: true }))) return;
             startTransition(async () => {
               const result = await deleteEvent(event.id);
               if (result?.error) toast.error(result.error);

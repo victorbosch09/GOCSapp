@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { sellItem } from "@/lib/actions/shop";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatCredits, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -33,6 +34,7 @@ export function InventoryCard({ items }: { items: InventoryItem[] }) {
 
 function InventoryRow({ item }: { item: InventoryItem }) {
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm">
@@ -62,8 +64,13 @@ function InventoryRow({ item }: { item: InventoryItem }) {
           size="sm"
           variant="outline"
           disabled={pending}
-          onClick={() => {
-            if (!confirm(`¿Vender "${item.item_name}" por ${formatCredits(item.purchase_price)}?`))
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: `¿Vender "${item.item_name}"?`,
+                description: `Recibís ${formatCredits(item.purchase_price)} de vuelta.`,
+              }))
+            )
               return;
             startTransition(async () => {
               const result = await sellItem(item.id);

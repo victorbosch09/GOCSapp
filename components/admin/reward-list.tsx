@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateReward, deleteReward } from "@/lib/actions/admin";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatCredits, formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ function RewardRow({ reward }: { reward: RewardWithProfile }) {
   const [title, setTitle] = useState(reward.title);
   const [description, setDescription] = useState(reward.description ?? "");
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   if (editing) {
     return (
@@ -79,11 +81,13 @@ function RewardRow({ reward }: { reward: RewardWithProfile }) {
           size="sm"
           variant="outline"
           disabled={pending}
-          onClick={() => {
+          onClick={async () => {
             if (
-              !confirm(
-                "¿Borrar esta recompensa? Si tenía créditos asociados, también se revierte el saldo."
-              )
+              !(await confirm({
+                title: "¿Borrar esta recompensa?",
+                description: "Si tenía créditos asociados, también se revierte el saldo.",
+                destructive: true,
+              }))
             )
               return;
             startTransition(async () => {

@@ -9,6 +9,7 @@ import {
   addTrainingMaterial,
   deleteTrainingMaterial,
 } from "@/lib/actions/training";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -197,6 +198,7 @@ function EvaluationForm({ profiles, skills }: { profiles: RosterEntry[]; skills:
 
 function EvaluationRowItem({ evaluation }: { evaluation: EvaluationRow }) {
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm">
       <div>
@@ -211,8 +213,8 @@ function EvaluationRowItem({ evaluation }: { evaluation: EvaluationRow }) {
         size="sm"
         variant="outline"
         disabled={pending}
-        onClick={() => {
-          if (!confirm("¿Borrar esta evaluación?")) return;
+        onClick={async () => {
+          if (!(await confirm({ title: "¿Borrar esta evaluación?", destructive: true }))) return;
           startTransition(async () => {
             const res = await deleteEvaluation(evaluation.id);
             if (res?.error) toast.error(res.error);
@@ -347,6 +349,7 @@ function MaterialsPanel({ materials }: { materials: TrainingMaterial[] }) {
 
 function MaterialRow({ material }: { material: TrainingMaterial }) {
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-3 text-sm">
       <div className="min-w-0">
@@ -357,8 +360,8 @@ function MaterialRow({ material }: { material: TrainingMaterial }) {
         size="sm"
         variant="outline"
         disabled={pending}
-        onClick={() => {
-          if (!confirm("¿Borrar este material?")) return;
+        onClick={async () => {
+          if (!(await confirm({ title: "¿Borrar este material?", destructive: true }))) return;
           startTransition(async () => {
             const res = await deleteTrainingMaterial(material.id);
             if (res?.error) toast.error(res.error);

@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/admin";
 import { formatCredits, formatDateTime } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
+import { useNow } from "@/lib/hooks/use-now";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -136,8 +137,9 @@ export function TreasuryPanel({
 }
 
 function SummaryCard({ transactions }: { transactions: TxnRow[] }) {
+  const now = useNow();
   const { income, expense } = useMemo(() => {
-    const cutoff = Date.now() - THIRTY_DAYS_MS;
+    const cutoff = now - THIRTY_DAYS_MS;
     let income = 0;
     let expense = 0;
     for (const t of transactions) {
@@ -146,7 +148,7 @@ function SummaryCard({ transactions }: { transactions: TxnRow[] }) {
       else expense += Math.abs(t.amount);
     }
     return { income, expense };
-  }, [transactions]);
+  }, [transactions, now]);
 
   const net = income - expense;
 

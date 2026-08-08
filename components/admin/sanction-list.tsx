@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateSanction, deleteSanction } from "@/lib/actions/admin";
+import { useNow } from "@/lib/hooks/use-now";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatCredits, formatDate, formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +39,9 @@ function SanctionRow({ sanction }: { sanction: SanctionWithProfile }) {
   );
   const [pending, startTransition] = useTransition();
 
-  const isExpired = sanction.expires_at != null && new Date(sanction.expires_at).getTime() < Date.now();
+  const now = useNow();
+  const confirm = useConfirm();
+  const isExpired = sanction.expires_at != null && new Date(sanction.expires_at).getTime() < now;
 
   if (editing) {
     return (
@@ -130,8 +134,14 @@ function SanctionRow({ sanction }: { sanction: SanctionWithProfile }) {
           size="sm"
           variant="outline"
           disabled={pending}
-          onClick={() => {
-            if (!confirm("¿Borrar esta sanción? Si tenía descuento, también se revierte el saldo."))
+          onClick={async () => {
+            if (
+              !(await confirm({
+                title: "¿Borrar esta sanción?",
+                description: "Si tenía descuento, también se revierte el saldo.",
+                destructive: true,
+              }))
+            )
               return;
             startTransition(async () => {
               const result = await deleteSanction(sanction.id);
