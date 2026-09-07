@@ -5,6 +5,7 @@ import {
   getSkillCompletionStats,
   getDisciplineOverview,
   getOperatorRankings,
+  getSquadRankings,
   getPinnedAnnouncements,
 } from "@/lib/data/team";
 import { formatCredits, formatDateTime } from "@/lib/format";
@@ -23,12 +24,13 @@ function Bar({ pct }: { pct: number }) {
 }
 
 export default async function EquipoPage() {
-  const [overview, roster, skillStats, discipline, rankings, announcements] = await Promise.all([
+  const [overview, roster, skillStats, discipline, rankings, squadRankings, announcements] = await Promise.all([
     getTeamOverview(),
     getRoster(),
     getSkillCompletionStats(),
     getDisciplineOverview(),
     getOperatorRankings(),
+    getSquadRankings(),
     getPinnedAnnouncements(),
   ]);
 
@@ -161,6 +163,36 @@ export default async function EquipoPage() {
           )}
         </CardContent>
       </Card>
+
+      {squadRankings.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading text-base">Ranking de escuadras (30 días)</CardTitle>
+            <CardDescription>Contratos + asistencias sumados por escuadra.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {squadRankings.map((s, i) => (
+              <div
+                key={s.squad}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/60 p-2.5 text-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <Badge variant={i === 0 ? "secondary" : "outline"} className={i === 0 ? "text-gocs-red" : ""}>
+                    #{i + 1}
+                  </Badge>
+                  <span className="font-medium">{s.squad}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {s.memberCount} operador{s.memberCount === 1 ? "" : "es"}
+                  </span>
+                </div>
+                <span className="text-muted-foreground">
+                  {s.contratos30d} contratos · {s.asistencias30d}/{s.eventosOficiales30d} asistencias
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

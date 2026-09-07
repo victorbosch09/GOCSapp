@@ -8,6 +8,8 @@ import { QuizList } from "@/components/training/quiz-player";
 import { TrainingStatsCard } from "@/components/training/stats-card";
 import { LeaderboardCard } from "@/components/training/leaderboard-card";
 import { MaterialsList } from "@/components/training/materials-list";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Entrenamiento — G.O.C.S." };
 
@@ -97,9 +99,14 @@ export default async function EntrenamientoPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-base">📖 Mi hoja de vida</CardTitle>
-          <CardDescription>Evaluaciones cargadas por instructores y mando, por módulo.</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div>
+            <CardTitle className="font-heading text-base">📖 Mi hoja de vida</CardTitle>
+            <CardDescription>Evaluaciones cargadas por instructores y mando, por módulo.</CardDescription>
+          </div>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/entrenamiento/hoja-de-vida">Ver / exportar PDF</Link>
+          </Button>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {evaluations.length === 0 ? (

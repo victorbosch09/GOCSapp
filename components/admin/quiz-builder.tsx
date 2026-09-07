@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { createQuiz, deleteQuiz, updateQuizBonus } from "@/lib/actions/quiz";
+import { createQuiz, deleteQuiz, updateQuizBonus, updateQuizAllowRetry } from "@/lib/actions/quiz";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Quiz, QuizDifficulty, Skill } from "@/types/database";
 
@@ -251,6 +252,21 @@ function QuizRow({ quiz }: { quiz: QuizWithMeta }) {
             }
           }}
           className="h-8 w-24"
+        />
+        <Label htmlFor={`retry-${quiz.id}`} className="text-xs text-muted-foreground">
+          Permitir reintento
+        </Label>
+        <Switch
+          id={`retry-${quiz.id}`}
+          checked={quiz.allow_retry}
+          disabled={pending}
+          onCheckedChange={(checked) =>
+            startTransition(async () => {
+              const result = await updateQuizAllowRetry(quiz.id, checked);
+              if (result?.error) toast.error(result.error);
+              else toast.success(checked ? "Reintento habilitado." : "Reintento deshabilitado.");
+            })
+          }
         />
         <Button
           size="sm"

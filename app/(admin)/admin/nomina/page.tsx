@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { getPayrollRuns, getPayrollSettings } from "@/lib/data/admin";
-import { formatCredits, formatDateTime } from "@/lib/format";
+import { formatCredits, formatDate, formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PayrollRunButton } from "@/components/admin/payroll-run-button";
 import { PayrollSettingsForm } from "@/components/admin/payroll-settings-form";
+import { TrendChart } from "@/components/ui/trend-chart";
 
 export const metadata: Metadata = { title: "Nómina — Mando G.O.C.S." };
 
@@ -31,6 +32,24 @@ export default async function AdminNominaPage() {
         </CardHeader>
         <CardContent>{settings && <PayrollSettingsForm settings={settings} />}</CardContent>
       </Card>
+
+      {runs.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading text-base">Evolución del gasto semanal</CardTitle>
+            <CardDescription>Total pagado por corrida, de más vieja a más nueva.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TrendChart
+              mode="bar"
+              data={[...runs]
+                .reverse()
+                .map((r) => ({ label: formatDate(r.run_at), value: r.total_amount }))}
+              formatValue={(v) => formatCredits(v)}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

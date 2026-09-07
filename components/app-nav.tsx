@@ -28,7 +28,7 @@ export function AppNav({
   const links = isCommandStaff ? [...LINKS, { href: "/admin", label: "Mando" }] : LINKS;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-gocs-carbon/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-gocs-carbon/95 backdrop-blur print:hidden">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <GocsWordmark />
         <nav className="flex flex-1 items-center gap-1 overflow-x-auto text-sm">

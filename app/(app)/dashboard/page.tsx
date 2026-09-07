@@ -22,9 +22,10 @@ import { UpcomingEventsCard } from "@/components/dashboard/upcoming-events-card"
 import { NotificationCard } from "@/components/dashboard/notification-card";
 import { NextRankCard } from "@/components/dashboard/next-rank-card";
 import { ActivityFeedCard, type ActivityItem } from "@/components/dashboard/activity-feed-card";
-import { getUpcomingEventsForDashboard, getOwnAttendanceStreak } from "@/lib/data/attendance";
+import { getUpcomingEventsForDashboard, getOwnAttendanceStreak, getOwnAttendanceHistory } from "@/lib/data/attendance";
 import { computeAchievements } from "@/lib/achievements";
 import { AchievementsCard } from "@/components/dashboard/achievements-card";
+import { AttendanceHeatmap } from "@/components/dashboard/attendance-heatmap";
 
 export const metadata: Metadata = { title: "Portal — G.O.C.S." };
 
@@ -52,6 +53,7 @@ export default async function DashboardPage() {
     quizAttempts,
     evaluations,
     attendanceStreak,
+    attendanceHistory,
   ] = await Promise.all([
     getCurrentProfile(),
     getOwnTransactions(),
@@ -63,6 +65,7 @@ export default async function DashboardPage() {
     getOwnQuizAttempts(),
     getOwnEvaluations(),
     getOwnAttendanceStreak(),
+    getOwnAttendanceHistory(),
   ]);
 
   const activity: ActivityItem[] = [
@@ -175,6 +178,8 @@ export default async function DashboardPage() {
       </div>
 
       <AchievementsCard achievements={achievements} />
+
+      <AttendanceHeatmap history={attendanceHistory} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">

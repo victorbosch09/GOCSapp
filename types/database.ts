@@ -297,6 +297,7 @@ export type Quiz = {
   description: string | null;
   difficulty: QuizDifficulty;
   bonus_amount: number;
+  allow_retry: boolean;
   created_by: string | null;
   created_at: string;
 };

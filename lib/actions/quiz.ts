@@ -71,6 +71,15 @@ export async function updateQuizBonus(quizId: string, bonusAmount: number): Prom
   return { success: true };
 }
 
+export async function updateQuizAllowRetry(quizId: string, allowRetry: boolean): Promise<ActionResult> {
+  await requireInstructorOrStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("quizzes").update({ allow_retry: allowRetry }).eq("id", quizId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/entrenamiento");
+  return { success: true };
+}
+
 export async function deleteQuiz(quizId: string): Promise<ActionResult> {
   await requireInstructorOrStaff();
   const admin = createAdminClient();

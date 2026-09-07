@@ -114,6 +114,25 @@
   }
 }
 
+@media print {
+  .print\:hidden {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print-sheet {
+    color: black !important;
+    background: white !important;
+  }
+  .print-sheet * {
+    color: black !important;
+    border-color: #ccc !important;
+    background: transparent !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

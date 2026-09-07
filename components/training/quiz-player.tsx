@@ -38,6 +38,9 @@ export function QuizList({ quizzes, attempts }: { quizzes: QuizWithMeta[]; attem
     <div className="flex flex-col gap-2">
       {quizzes.map((q) => {
         const done = attemptByQuiz.get(q.id);
+        const passed = done ? done.score / done.total >= 0.7 : false;
+        const canRetry = !!done && !passed && q.allow_retry;
+        const disabled = !!done && (passed || !q.allow_retry);
         return (
           <Card key={q.id}>
             <CardContent className="flex items-center justify-between gap-3 py-3">
@@ -51,9 +54,7 @@ export function QuizList({ quizzes, attempts }: { quizzes: QuizWithMeta[]; attem
                   {done && (
                     <Badge
                       className={
-                        done.score / done.total >= 0.7
-                          ? "bg-emerald-500/15 text-emerald-400"
-                          : "bg-destructive/15 text-destructive"
+                        passed ? "bg-emerald-500/15 text-emerald-400" : "bg-destructive/15 text-destructive"
                       }
                       variant="secondary"
                     >
@@ -64,13 +65,23 @@ export function QuizList({ quizzes, attempts }: { quizzes: QuizWithMeta[]; attem
                 {q.description && <p className="text-sm text-muted-foreground">{q.description}</p>}
                 {!done && (
                   <p className="text-xs text-muted-foreground">
-                    {q.questions.length} preguntas · Aprobar (≥70%) da +{formatCredits(q.bonus_amount)} — un
-                    solo intento
+                    {q.questions.length} preguntas · Aprobar (≥70%) da +{formatCredits(q.bonus_amount)}
+                    {q.allow_retry ? " — se puede reintentar si no aprobás" : " — un solo intento"}
+                  </p>
+                )}
+                {canRetry && (
+                  <p className="text-xs text-amber-500">
+                    No aprobaste, pero este quiz permite reintentar.
                   </p>
                 )}
               </div>
-              <Button size="sm" onClick={() => setActiveQuiz(q)} disabled={!!done} title={done ? "Ya rendiste este quiz — no se puede repetir" : undefined}>
-                {done ? "Rendido" : "Hacer quiz"}
+              <Button
+                size="sm"
+                onClick={() => setActiveQuiz(q)}
+                disabled={disabled}
+                title={disabled ? "Ya rendiste este quiz — no se puede repetir" : undefined}
+              >
+                {canRetry ? "Reintentar" : done ? "Rendido" : "Hacer quiz"}
               </Button>
             </CardContent>
           </Card>

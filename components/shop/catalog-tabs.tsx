@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table as UITable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { CatalogItem, Vehicle } from "@/types/database";
 
 const NEW_ITEM_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -51,6 +53,24 @@ export function CatalogTabs({
   const [data, setData] = useState(initial);
   const [search, setSearch] = useState("");
   const [hideOutOfStock, setHideOutOfStock] = useState(false);
+  const [compareItems, setCompareItems] = useState<{ item: CatalogItem | Vehicle; table: Table }[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+
+  function toggleCompare(item: CatalogItem | Vehicle, table: Table) {
+    setCompareItems((prev) => {
+      const exists = prev.some((c) => c.item.id === item.id);
+      if (exists) return prev.filter((c) => c.item.id !== item.id);
+      if (prev.length > 0 && prev[0].table !== table) {
+        toast.error("Solo podés comparar ítems de la misma categoría.");
+        return prev;
+      }
+      if (prev.length >= 3) {
+        toast.error("Máximo 3 ítems para comparar.");
+        return prev;
+      }
+      return [...prev, { item, table }];
+    });
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -133,6 +153,8 @@ export function CatalogTabs({
                           balance={balance}
                           canBuy={canBuy}
                           myRankSortOrder={myRankSortOrder}
+                          comparing={compareItems.some((c) => c.item.id === item.id)}
+                          onToggleCompare={() => toggleCompare(item, table)}
                         />
                       ))}
                     </div>
@@ -143,6 +165,98 @@ export function CatalogTabs({
           );
         })}
       </Tabs>
+
+      {compareItems.length > 0 && (
+        <div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border/60 bg-popover px-4 py-2 shadow-lg">
+          <span className="text-sm text-muted-foreground">{compareItems.length} seleccionado{compareItems.length === 1 ? "" : "s"}</span>
+          <Button size="sm" disabled={compareItems.length < 2} onClick={() => setCompareOpen(true)}>
+            Comparar
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setCompareItems([])}>
+            Limpiar
+          </Button>
+        </div>
+      )}
+
+      <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Comparar ítems</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <UITable>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campo</TableHead>
+                  {compareItems.map((c) => (
+                    <TableHead key={c.item.id}>{c.item.name}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="text-muted-foreground">Categoría</TableCell>
+                  {compareItems.map((c) => (
+                    <TableCell key={c.item.id}>{c.item.category}</TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-muted-foreground">Precio</TableCell>
+                  {compareItems.map((c) => (
+                    <TableCell key={c.item.id} className="font-medium text-gocs-red">
+                      {formatCredits(c.item.price)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-muted-foreground">Capacidad</TableCell>
+                  {compareItems.map((c) => (
+                    <TableCell key={c.item.id}>
+                      {"capacity" in c.item && c.item.capacity ? c.item.capacity : "—"}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-muted-foreground">Cargador estándar</TableCell>
+                  {compareItems.map((c) => (
+                    <TableCell key={c.item.id}>
+                      {"mag_price_standard" in c.item && c.item.mag_price_standard
+                        ? formatCredits(c.item.mag_price_standard)
+                        : "—"}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-muted-foreground">Cargador especial</TableCell>
+                  {compareItems.map((c) => (
+                    <TableCell key={c.item.id}>
+                      {"mag_price_special" in c.item && c.item.mag_price_special
+                        ? formatCredits(c.item.mag_price_special)
+                        : "—"}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-muted-foreground">Rango mínimo</TableCell>
+                  {compareItems.map((c) => (
+                    <TableCell key={c.item.id}>
+                      {"min_rank_sort_order" in c.item && c.item.min_rank_sort_order != null
+                        ? `Nivel ${c.item.min_rank_sort_order}`
+                        : "Ninguno"}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-muted-foreground">Stock</TableCell>
+                  {compareItems.map((c) => (
+                    <TableCell key={c.item.id}>{c.item.stock}</TableCell>
+                  ))}
+                </TableRow>
+              </TableBody>
+            </UITable>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -153,12 +267,16 @@ function ItemCard({
   balance,
   canBuy,
   myRankSortOrder,
+  comparing,
+  onToggleCompare,
 }: {
   item: CatalogItem | Vehicle;
   table: Table;
   balance: number;
   canBuy: boolean;
   myRankSortOrder: number;
+  comparing: boolean;
+  onToggleCompare: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const magStd = "mag_price_standard" in item ? item.mag_price_standard : null;
@@ -231,6 +349,10 @@ function ItemCard({
           </p>
         )}
         {item.notes && <p className="text-xs text-muted-foreground">{item.notes}</p>}
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Checkbox checked={comparing} onCheckedChange={onToggleCompare} />
+          Comparar
+        </label>
         {!rankOk && (
           <p className="text-xs text-destructive">🔒 Requiere un rango más alto para comprar.</p>
         )}

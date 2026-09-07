@@ -76,6 +76,52 @@ export async function getOwnAttendanceStreak() {
   return streak;
 }
 
+export type AttendanceHistoryEntry = {
+  eventId: string;
+  title: string;
+  startAt: string;
+  status: "asistio" | "falto" | "sin_marcar";
+};
+
+/** Últimos N eventos oficiales pasados y si el propio operador asistió, para el heatmap del dashboard. */
+export async function getOwnAttendanceHistory(limit = 60): Promise<AttendanceHistoryEntry[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: events } = await supabase
+    .from("events")
+    .select("id, title, start_at")
+    .in("event_type", ["entrenamiento", "operacion"])
+    .lt("start_at", new Date().toISOString())
+    .order("start_at", { ascending: false })
+    .limit(limit);
+
+  if (!events || events.length === 0) return [];
+
+  const { data: attendance } = await supabase
+    .from("event_attendance")
+    .select("event_id, attended")
+    .eq("profile_id", user.id)
+    .in(
+      "event_id",
+      events.map((e) => e.id)
+    );
+
+  const byEvent = new Map((attendance ?? []).map((a) => [a.event_id, a.attended]));
+
+  return events
+    .map((e) => {
+      const attended = byEvent.get(e.id);
+      const status: AttendanceHistoryEntry["status"] =
+        attended === undefined ? "sin_marcar" : attended ? "asistio" : "falto";
+      return { eventId: e.id, title: e.title, startAt: e.start_at, status };
+    })
+    .reverse();
+}
+
 export async function getAttendanceBoard() {
   const supabase = await createClient();
 
