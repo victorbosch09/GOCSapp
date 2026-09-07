@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { applySanction, createSanctionType } from "@/lib/actions/admin";
+import { applySanction, createSanctionType, listInventory } from "@/lib/actions/admin";
+import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Profile, SanctionSeverity, SanctionType } from "@/types/database";
+import type { InventoryItem, Profile, SanctionSeverity, SanctionType } from "@/types/database";
 
 const SEVERITIES: SanctionSeverity[] = ["leve", "moderada", "grave", "muy grave", "extrema"];
 
@@ -26,11 +28,38 @@ export function SanctionForm({
   const [amount, setAmount] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [pending, startTransition] = useTransition();
+  const [inventory, setInventory] = useState<InventoryItem[] | null>(null);
+  const [confiscateIds, setConfiscateIds] = useState<Set<string>>(new Set());
 
   const selectedType = useMemo(
     () => sanctionTypes.find((t) => t.id === typeId),
     [sanctionTypes, typeId]
   );
+
+  // Reset the confiscation picker during render when the selected soldier
+  // changes (React's "adjust state during render" pattern), then fetch that
+  // soldier's inventory in an effect — keeps the effect body free of
+  // synchronous setState calls.
+  const [prevProfileId, setPrevProfileId] = useState(profileId);
+  if (profileId !== prevProfileId) {
+    setPrevProfileId(profileId);
+    setConfiscateIds(new Set());
+    setInventory(null);
+  }
+
+  useEffect(() => {
+    if (!profileId) return;
+    listInventory(profileId).then(setInventory);
+  }, [profileId]);
+
+  function toggleConfiscate(itemId: string) {
+    setConfiscateIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  }
 
   function onTypeChange(id: string) {
     setTypeId(id);
@@ -54,6 +83,7 @@ export function SanctionForm({
         description,
         amountDeducted: amount ? Number(amount) : null,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        confiscateInventoryIds: Array.from(confiscateIds),
       });
       if (result?.error) {
         toast.error(result.error);
@@ -64,6 +94,7 @@ export function SanctionForm({
         setDescription("");
         setAmount("");
         setExpiresAt("");
+        setConfiscateIds(new Set());
       }
     });
   }
@@ -132,6 +163,39 @@ export function SanctionForm({
           <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </div>
       </div>
+
+      {profileId && (
+        <div>
+          <Label className="mb-2 block">Confiscar ítems del inventario (opcional)</Label>
+          {inventory === null ? (
+            <p className="text-xs text-muted-foreground">Cargando inventario...</p>
+          ) : inventory.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Este soldado no tiene ítems en su inventario.</p>
+          ) : (
+            <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto rounded-md border border-border/60 p-2">
+              {inventory.map((item) => (
+                <label
+                  key={item.id}
+                  className="flex items-center gap-2 rounded-md p-1.5 text-sm hover:bg-muted"
+                >
+                  <Checkbox
+                    checked={confiscateIds.has(item.id)}
+                    onCheckedChange={() => toggleConfiscate(item.id)}
+                  />
+                  <span className="flex-1">{item.item_name}</span>
+                  <span className="text-xs text-muted-foreground">{formatCredits(item.purchase_price)}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {confiscateIds.size > 0 && (
+            <p className="mt-1 text-xs text-amber-500">
+              {confiscateIds.size} ítem{confiscateIds.size === 1 ? "" : "s"} se van a borrar del
+              inventario sin reembolso al aplicar esta sanción.
+            </p>
+          )}
+        </div>
+      )}
 
       <div>
         <Label className="mb-2 block">Vence el (opcional — vacío = sin vencimiento)</Label>

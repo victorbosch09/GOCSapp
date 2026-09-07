@@ -32,6 +32,7 @@ export type Profile = {
   join_date: string;
   avatar_url: string | null;
   bio: string | null;
+  discord_username: string | null;
   onboarded: boolean;
   cached_balance: number;
   created_at: string;
@@ -165,6 +166,7 @@ export type Sanction = {
   transaction_id: string | null;
   applied_at: string;
   expires_at: string | null;
+  confiscated_items: { id: string; name: string }[] | null;
 };
 
 export type EventType = "entrenamiento" | "operacion" | "pago" | "otro";
@@ -270,6 +272,7 @@ export type IntegrationSettings = {
   discord_webhook_url: string | null;
   notify_on_event: boolean;
   notify_on_notification: boolean;
+  attendance_webhook_secret: string | null;
   updated_at: string;
   updated_by: string | null;
 };

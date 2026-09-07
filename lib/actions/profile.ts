@@ -14,6 +14,7 @@ type ActionResult = { error?: string; success?: true };
 export async function updateOwnProfile(input: {
   bio: string;
   avatarUrl: string;
+  discordUsername?: string;
 }): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -26,7 +27,11 @@ export async function updateOwnProfile(input: {
   const admin = createAdminClient();
   const { error } = await admin
     .from("profiles")
-    .update({ bio: input.bio || null, avatar_url: input.avatarUrl || null })
+    .update({
+      bio: input.bio || null,
+      avatar_url: input.avatarUrl || null,
+      discord_username: input.discordUsername?.trim() || null,
+    })
     .eq("id", user.id);
 
   if (error) return { error: error.message };

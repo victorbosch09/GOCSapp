@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireCommandStaff } from "@/lib/data/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -594,19 +595,28 @@ export async function applySanction(input: {
   description: string;
   amountDeducted: number | null;
   expiresAt: string | null;
+  confiscateInventoryIds?: string[];
 }): Promise<ActionResult> {
   const staff = await requireCommandStaff();
   const admin = createAdminClient();
   let transactionId: string | null = null;
 
-  if (input.amountDeducted && input.amountDeducted > 0) {
+  // Normalize to a positive magnitude up front: a user typing "-500" meaning
+  // "deduct 500" (natural for a "descuento" field) used to silently skip
+  // creating the transaction entirely — `-500 > 0` is false — while still
+  // saving a misleading amount_deducted: -500 on the sanction, so the
+  // balance never actually moved. Math.abs() here makes both signs behave
+  // the same way: always a deduction.
+  const amount = input.amountDeducted ? Math.abs(input.amountDeducted) : null;
+
+  if (amount && amount > 0) {
     const { data: txn, error: txnError } = await admin
       .from("transactions")
       .insert({
         profile_id: input.profileId,
         type: "Descuento",
         detail: `Sanción (${input.severity})`,
-        amount: -Math.abs(input.amountDeducted),
+        amount: -amount,
         notes: input.description || null,
         created_by: staff.id,
       })
@@ -616,15 +626,33 @@ export async function applySanction(input: {
     transactionId = txn.id;
   }
 
+  let confiscatedItems: { id: string; name: string }[] | null = null;
+  const confiscateIds = input.confiscateInventoryIds?.filter(Boolean) ?? [];
+  if (confiscateIds.length > 0) {
+    const { data: items, error: itemsError } = await admin
+      .from("inventory")
+      .select("id, item_name")
+      .eq("profile_id", input.profileId)
+      .in("id", confiscateIds);
+    if (itemsError) return { error: itemsError.message };
+    if (!items || items.length !== confiscateIds.length) {
+      return { error: "Alguno de los ítems seleccionados ya no está en el inventario del soldado." };
+    }
+    confiscatedItems = items.map((i) => ({ id: i.id, name: i.item_name }));
+    const { error: deleteError } = await admin.from("inventory").delete().in("id", confiscateIds);
+    if (deleteError) return { error: deleteError.message };
+  }
+
   const { error: sanctionError } = await admin.from("sanctions").insert({
     profile_id: input.profileId,
     sanction_type_id: input.sanctionTypeId,
     severity: input.severity,
     description: input.description || null,
-    amount_deducted: input.amountDeducted,
+    amount_deducted: amount,
     applied_by: staff.id,
     transaction_id: transactionId,
     expires_at: input.expiresAt,
+    confiscated_items: confiscatedItems,
   });
   if (sanctionError) return { error: sanctionError.message };
 
@@ -788,6 +816,19 @@ export async function updateIntegrationSettings(patch: {
   if (error) return { error: error.message };
   revalidatePath("/admin/notificaciones");
   return { success: true };
+}
+
+export async function regenerateAttendanceWebhookSecret(): Promise<ActionResult & { secret?: string }> {
+  const staff = await requireCommandStaff();
+  const admin = createAdminClient();
+  const secret = randomBytes(24).toString("hex");
+  const { error } = await admin
+    .from("integration_settings")
+    .update({ attendance_webhook_secret: secret, updated_by: staff.id, updated_at: new Date().toISOString() })
+    .eq("id", true);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/notificaciones");
+  return { success: true, secret };
 }
 
 export async function runPayrollNow(): Promise<ActionResult> {

@@ -37,6 +37,7 @@ export function SanctionList({ sanctions }: { sanctions: SanctionWithProfile[] }
               severidad: s.severity,
               descripcion: s.description ?? "",
               descuento: s.amount_deducted ?? "",
+              confiscado: s.confiscated_items?.map((i) => i.name).join("; ") ?? "",
               vence: s.expires_at ?? "",
             }))
           )
@@ -140,6 +141,11 @@ function SanctionRow({ sanction }: { sanction: SanctionWithProfile }) {
           )}
         </div>
         <p className="truncate text-muted-foreground">{sanction.description ?? "—"}</p>
+        {sanction.confiscated_items && sanction.confiscated_items.length > 0 && (
+          <p className="text-xs text-amber-500">
+            Confiscado: {sanction.confiscated_items.map((i) => i.name).join(", ")}
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">{formatDateTime(sanction.applied_at)}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">

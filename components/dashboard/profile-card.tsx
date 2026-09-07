@@ -9,10 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-export function ProfileCard({ bio, avatarUrl }: { bio: string | null; avatarUrl: string | null }) {
+export function ProfileCard({
+  bio,
+  avatarUrl,
+  discordUsername,
+}: {
+  bio: string | null;
+  avatarUrl: string | null;
+  discordUsername: string | null;
+}) {
   const [editing, setEditing] = useState(false);
   const [bioValue, setBioValue] = useState(bio ?? "");
   const [avatarValue, setAvatarValue] = useState(avatarUrl ?? "");
+  const [discordValue, setDiscordValue] = useState(discordUsername ?? "");
   const [pending, startTransition] = useTransition();
 
   return (
@@ -42,6 +51,17 @@ export function ProfileCard({ bio, avatarUrl }: { bio: string | null; avatarUrl:
                 placeholder="Contá algo sobre vos como operador..."
               />
             </div>
+            <div>
+              <Label className="mb-1.5 block text-xs">Usuario de Discord (opcional)</Label>
+              <Input
+                value={discordValue}
+                onChange={(e) => setDiscordValue(e.target.value)}
+                placeholder="tu_usuario"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Se usa para vincular tu asistencia marcada en Discord con tu perfil acá.
+              </p>
+            </div>
             <div className="flex justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
                 Cancelar
@@ -51,7 +71,11 @@ export function ProfileCard({ bio, avatarUrl }: { bio: string | null; avatarUrl:
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    const result = await updateOwnProfile({ bio: bioValue, avatarUrl: avatarValue });
+                    const result = await updateOwnProfile({
+                      bio: bioValue,
+                      avatarUrl: avatarValue,
+                      discordUsername: discordValue,
+                    });
                     if (result?.error) toast.error(result.error);
                     else {
                       toast.success("Perfil actualizado.");
@@ -69,6 +93,9 @@ export function ProfileCard({ bio, avatarUrl }: { bio: string | null; avatarUrl:
             <p className="text-sm text-muted-foreground">
               {bio || "Todavía no escribiste nada sobre vos."}
             </p>
+            {discordUsername && (
+              <p className="text-xs text-muted-foreground">Discord: {discordUsername}</p>
+            )}
             <Button size="sm" variant="outline" className="self-start" onClick={() => setEditing(true)}>
               Editar perfil
             </Button>

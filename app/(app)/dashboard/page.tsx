@@ -228,7 +228,7 @@ export default async function DashboardPage() {
 
       <InventoryCard items={inventory} />
 
-      <ProfileCard bio={profile.bio} avatarUrl={profile.avatar_url} />
+      <ProfileCard bio={profile.bio} avatarUrl={profile.avatar_url} discordUsername={profile.discord_username} />
 
       <Card>
         <CardHeader>
