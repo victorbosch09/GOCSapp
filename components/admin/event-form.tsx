@@ -42,7 +42,18 @@ export function EventAdmin({ events }: { events: Event[] }) {
       return;
     }
     startTransition(async () => {
-      const result = await createEvent({ title, description, eventType, startAt, endAt: endAt || null });
+      // Convertir a ISO acá, en el navegador: un datetime-local no lleva
+      // zona horaria, y si se manda el texto crudo el servidor lo
+      // interpretaría con SU propia zona (UTC en Vercel), corriendo la hora
+      // real varias horas. El navegador sí sabe la zona horaria real del
+      // usuario, así que la conversión tiene que pasar por acá.
+      const result = await createEvent({
+        title,
+        description,
+        eventType,
+        startAt: new Date(startAt).toISOString(),
+        endAt: endAt ? new Date(endAt).toISOString() : null,
+      });
       if (result?.error) {
         toast.error(result.error);
       } else {
@@ -154,8 +165,8 @@ function EventRow({ event }: { event: Event }) {
                   title,
                   description,
                   eventType,
-                  startAt,
-                  endAt: endAt || null,
+                  startAt: new Date(startAt).toISOString(),
+                  endAt: endAt ? new Date(endAt).toISOString() : null,
                 });
                 if (result?.error) toast.error(result.error);
                 else {
