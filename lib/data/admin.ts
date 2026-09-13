@@ -66,41 +66,45 @@ export async function getAllEventsAdmin() {
 
 export async function getRecentRewards() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("rewards")
-    .select("*, profile:profiles(callsign)")
+    .select("*, profile:profiles!rewards_profile_id_fkey(callsign)")
     .order("awarded_at", { ascending: false })
     .limit(20);
+  if (error) console.error("[getRecentRewards]", error.message);
   return (data ?? []) as unknown as (Reward & { profile: { callsign: string } | null })[];
 }
 
 export async function getRecentSanctions() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("sanctions")
-    .select("*, profile:profiles(callsign)")
+    .select("*, profile:profiles!sanctions_profile_id_fkey(callsign)")
     .order("applied_at", { ascending: false })
     .limit(20);
+  if (error) console.error("[getRecentSanctions]", error.message);
   return (data ?? []) as unknown as (Sanction & { profile: { callsign: string } | null })[];
 }
 
 export async function getRecentTransactions(limit = 40) {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("transactions")
-    .select("*, profile:profiles(callsign)")
+    .select("*, profile:profiles!transactions_profile_id_fkey(callsign)")
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (error) console.error("[getRecentTransactions]", error.message);
   return (data ?? []) as unknown as (Transaction & { profile: { callsign: string } | null })[];
 }
 
 export async function getRecentContracts() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("contracts")
-    .select("*, profile:profiles(callsign)")
+    .select("*, profile:profiles!contracts_profile_id_fkey(callsign)")
     .order("created_at", { ascending: false })
     .limit(40);
+  if (error) console.error("[getRecentContracts]", error.message);
   return (data ?? []) as unknown as (Contract & { profile: { callsign: string } | null })[];
 }
 

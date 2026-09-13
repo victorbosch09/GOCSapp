@@ -106,11 +106,12 @@ export async function getTrainingMaterials() {
 
 export async function getAllEvaluations() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("skill_evaluations")
-    .select("*, skill:skills(name), profile:profiles(callsign)")
+    .select("*, skill:skills(name), profile:profiles!skill_evaluations_profile_id_fkey(callsign)")
     .order("evaluated_at", { ascending: false })
     .limit(100);
+  if (error) console.error("[getAllEvaluations]", error.message);
   return (data ?? []) as unknown as (SkillEvaluation & {
     skill: { name: string } | null;
     profile: { callsign: string } | null;
