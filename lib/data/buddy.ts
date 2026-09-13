@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const ASPIRANT_RANK_NAME = "Candidato";
 const MIN_MENTOR_RANK_NAME = "Operador lvl1";
@@ -35,17 +36,25 @@ export function isMentorEligible(rankSortOrder: number | null | undefined, thres
   return rankSortOrder != null && rankSortOrder >= threshold;
 }
 
+// Estas lecturas usan el admin client a propósito: profiles.RLS solo deja
+// ver la fila propia a quien no es mando ("profiles_select_own"), así que
+// un Operador lvl1 común nunca podía ver a otros candidatos a compañero ni
+// a otros tríos (los embeds de profiles dentro de buddy_teams también caen
+// bajo esa misma RLS). Las tablas buddy_* ya tienen su propia policy que
+// deja ver todo a cualquier aprobado, así que esto no expone nada de más —
+// solo evita que la RLS de profiles bloquee un dato que ya debía ser visible.
+
 /** Aprobados de rango Operador lvl1 o superior, sin trío activo — candidatos a formar equipo. */
 export async function getAvailableBuddyOperators(): Promise<BuddyProfile[]> {
-  const supabase = await createClient();
+  const admin = createAdminClient();
   const threshold = await getMentorRankThreshold();
 
-  const { data: profiles } = await supabase
+  const { data: profiles } = await admin
     .from("profiles")
     .select("id, callsign, avatar_url, rank:ranks(sort_order)")
     .eq("approved", true);
 
-  const { data: activeTeams } = await supabase
+  const { data: activeTeams } = await admin
     .from("buddy_teams")
     .select("operator_a_id, operator_b_id")
     .not("status", "in", "(graduado,disuelto)");
@@ -64,14 +73,14 @@ export async function getAvailableBuddyOperators(): Promise<BuddyProfile[]> {
 
 /** Candidatos aprobados que no son aspirantes de ningún trío activo — disponibles para draftear. */
 export async function getAvailableAspirants(): Promise<BuddyProfile[]> {
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const { data: profiles } = await supabase
+  const { data: profiles } = await admin
     .from("profiles")
     .select("id, callsign, avatar_url, rank:ranks(name)")
     .eq("approved", true);
 
-  const { data: activeTeams } = await supabase
+  const { data: activeTeams } = await admin
     .from("buddy_teams")
     .select("aspirant_id")
     .not("status", "in", "(graduado,disuelto)")
@@ -86,9 +95,9 @@ export async function getAvailableAspirants(): Promise<BuddyProfile[]> {
 }
 
 export async function getAllBuddyTeams(): Promise<BuddyTeamFull[]> {
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const { data: teams } = await supabase
+  const { data: teams, error } = await admin
     .from("buddy_teams")
     .select(
       `id, status, mando_points, formed_at, graduated_at,
@@ -97,23 +106,24 @@ export async function getAllBuddyTeams(): Promise<BuddyTeamFull[]> {
        aspirant:profiles!buddy_teams_aspirant_id_fkey(id, callsign, avatar_url)`
     )
     .order("formed_at", { ascending: false });
+  if (error) console.error("[getAllBuddyTeams]", error.message);
 
   if (!teams || teams.length === 0) return [];
 
   const teamIds = teams.map((t) => t.id);
 
   const [{ data: activities }, { data: ratings }, { data: bonuses }] = await Promise.all([
-    supabase
+    admin
       .from("buddy_activities")
       .select("id, team_id, note, created_at, author:profiles(id, callsign, avatar_url)")
       .in("team_id", teamIds)
       .order("created_at", { ascending: false }),
-    supabase
+    admin
       .from("buddy_ratings")
       .select("id, team_id, score, note, created_at, rated_by_profile:profiles!buddy_ratings_rated_by_fkey(id, callsign, avatar_url)")
       .in("team_id", teamIds)
       .order("created_at", { ascending: false }),
-    supabase
+    admin
       .from("buddy_bonuses")
       .select("id, team_id, amount, note, created_at")
       .in("team_id", teamIds),
