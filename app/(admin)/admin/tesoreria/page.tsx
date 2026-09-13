@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTreasury, getTreasuryTransactions, getTreasuryBalanceHistory } from "@/lib/data/treasury";
-import { formatCredits, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TrendChart } from "@/components/ui/trend-chart";
 import { TreasuryPanel } from "@/components/admin/treasury-panel";
@@ -33,7 +33,7 @@ export default async function AdminTesoreriaPage() {
             <TrendChart
               mode="line"
               data={balanceHistory.map((w) => ({ label: formatDate(w.weekOf), value: w.balance }))}
-              formatValue={(v) => formatCredits(v)}
+              unit="credits"
             />
           </CardContent>
         </Card>

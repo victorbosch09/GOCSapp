@@ -45,7 +45,7 @@ export default async function AdminNominaPage() {
               data={[...runs]
                 .reverse()
                 .map((r) => ({ label: formatDate(r.run_at), value: r.total_amount }))}
-              formatValue={(v) => formatCredits(v)}
+              unit="credits"
             />
           </CardContent>
         </Card>

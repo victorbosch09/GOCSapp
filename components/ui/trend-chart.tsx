@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { formatCredits } from "@/lib/format";
 
 type Point = { label: string; value: number };
 
@@ -8,18 +9,23 @@ type Point = { label: string; value: number };
  * Dependency-free inline SVG chart (bar or line). Built instead of pulling in
  * a charting library — the app has no chart dependency anywhere else and
  * this only needs simple trend visualization, not interactive analytics.
+ *
+ * `unit` is a plain string (not a formatter function) because this is a
+ * Client Component rendered from Server Component pages — a function prop
+ * crossing that boundary isn't serializable and crashes the whole page
+ * ("Functions cannot be passed directly to Client Components").
  */
 export function TrendChart({
   data,
   mode = "bar",
   height = 160,
-  formatValue,
+  unit,
   color = "var(--color-gocs-red, #dc2626)",
 }: {
   data: Point[];
   mode?: "bar" | "line";
   height?: number;
-  formatValue?: (v: number) => string;
+  unit?: "credits";
   color?: string;
 }) {
   const gradientId = useId();
@@ -45,7 +51,7 @@ export function TrendChart({
   }
 
   const linePoints = data.map((d, i) => `${padding + i * stepX},${yFor(d.value)}`).join(" ");
-  const fmt = formatValue ?? ((v: number) => String(Math.round(v)));
+  const fmt = unit === "credits" ? formatCredits : (v: number) => String(Math.round(v));
 
   return (
     <div className="w-full overflow-x-auto">
