@@ -1,8 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
-const OPERATOR_RANK_NAME = "Operador lvl1";
 const ASPIRANT_RANK_NAME = "Candidato";
+const MIN_MENTOR_RANK_NAME = "Operador lvl1";
 
 export type BuddyProfile = { id: string; callsign: string; avatar_url: string | null };
 
@@ -20,13 +20,29 @@ export type BuddyTeamFull = {
   bonuses: { id: string; amount: number; note: string | null; created_at: string }[];
 };
 
-/** Operadores lvl1 aprobados que no están en ningún trío activo — candidatos a formar equipo. */
+/**
+ * Sort_order of "Operador lvl1" — anyone at or above this rank can mentor
+ * in the Buddy System (ON-1, ON-2, Especialista, Líder, etc, not just ON-1).
+ * Only "Candidato" (sort_order below this) is excluded from mentoring.
+ */
+export async function getMentorRankThreshold(): Promise<number> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("ranks").select("sort_order").eq("name", MIN_MENTOR_RANK_NAME).single();
+  return data?.sort_order ?? 0;
+}
+
+export function isMentorEligible(rankSortOrder: number | null | undefined, threshold: number): boolean {
+  return rankSortOrder != null && rankSortOrder >= threshold;
+}
+
+/** Aprobados de rango Operador lvl1 o superior, sin trío activo — candidatos a formar equipo. */
 export async function getAvailableBuddyOperators(): Promise<BuddyProfile[]> {
   const supabase = await createClient();
+  const threshold = await getMentorRankThreshold();
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, callsign, avatar_url, rank:ranks(name)")
+    .select("id, callsign, avatar_url, rank:ranks(sort_order)")
     .eq("approved", true);
 
   const { data: activeTeams } = await supabase
@@ -41,7 +57,7 @@ export async function getAvailableBuddyOperators(): Promise<BuddyProfile[]> {
   }
 
   return (profiles ?? [])
-    .filter((p) => (p as unknown as { rank: { name: string } | null }).rank?.name === OPERATOR_RANK_NAME)
+    .filter((p) => isMentorEligible((p as unknown as { rank: { sort_order: number } | null }).rank?.sort_order, threshold))
     .filter((p) => !busy.has(p.id))
     .map((p) => ({ id: p.id, callsign: p.callsign, avatar_url: p.avatar_url }));
 }

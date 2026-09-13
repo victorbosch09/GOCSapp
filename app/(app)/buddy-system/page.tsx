@@ -1,35 +1,50 @@
 import type { Metadata } from "next";
 import { getCurrentProfile } from "@/lib/data/profile";
-import { getAllBuddyTeams, getAvailableBuddyOperators, getAvailableAspirants, getBuddyStats } from "@/lib/data/buddy";
+import {
+  getAllBuddyTeams,
+  getAvailableBuddyOperators,
+  getAvailableAspirants,
+  getBuddyStats,
+  getMentorRankThreshold,
+  isMentorEligible,
+} from "@/lib/data/buddy";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FormTeamPanel } from "@/components/buddy/form-team-panel";
 import { BuddyTeamCard } from "@/components/buddy/buddy-team-card";
 
 export const metadata: Metadata = { title: "Buddy System — G.O.C.S." };
 
-const OPERATOR_RANK_NAME = "Operador lvl1";
+const CONCLUDED: string[] = ["graduado", "disuelto"];
 
 export default async function BuddySystemPage() {
-  const [profile, teams, availableOperators, availableAspirants, stats] = await Promise.all([
+  const [profile, teams, availableOperators, availableAspirants, stats, mentorThreshold] = await Promise.all([
     getCurrentProfile(),
     getAllBuddyTeams(),
     getAvailableBuddyOperators(),
     getAvailableAspirants(),
     getBuddyStats(),
+    getMentorRankThreshold(),
   ]);
 
-  const myTeam = teams.find(
+  // Un trío graduado o disuelto ya "terminó" — no cuenta como el equipo
+  // activo de nadie, así que sus dos operadores vuelven a estar libres para
+  // formar un trío nuevo.
+  const activeTeams = teams.filter((t) => !CONCLUDED.includes(t.status));
+  const concludedTeams = teams.filter((t) => CONCLUDED.includes(t.status));
+
+  const myTeam = activeTeams.find(
     (t) => t.operator_a.id === profile.id || t.operator_b.id === profile.id
   );
-  const iAmOperator = profile.rank?.name === OPERATOR_RANK_NAME;
-  const otherTeams = teams.filter((t) => t.id !== myTeam?.id);
+  const iAmMentorEligible = isMentorEligible(profile.rank?.sort_order, mentorThreshold);
+  const otherTeams = activeTeams.filter((t) => t.id !== myTeam?.id);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl">Buddy System</h1>
         <p className="text-muted-foreground">
-          Dos Operadores lvl1 adoptan un Candidato, lo entrenan y lo preparan para ascender.
+          Dos operadores (Operador lvl1 o superior) adoptan un Candidato, lo entrenan y lo preparan
+          para ascender.
         </p>
       </div>
 
@@ -45,15 +60,15 @@ export default async function BuddySystemPage() {
           <h2 className="font-heading mb-2 text-sm text-muted-foreground">Mi equipo</h2>
           <BuddyTeamCard team={myTeam} isMine availableAspirants={availableAspirants} />
         </div>
-      ) : iAmOperator ? (
+      ) : iAmMentorEligible ? (
         <FormTeamPanel candidates={availableOperators.filter((o) => o.id !== profile.id)} />
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading text-base">Solo para Operadores lvl1</CardTitle>
+            <CardTitle className="font-heading text-base">Solo para Operador lvl1 o superior</CardTitle>
             <CardDescription>
-              El Buddy System es para operadores de rango Operador lvl1. Podés ver los tríos activos
-              del clan más abajo.
+              El Buddy System es para operadores de rango Operador lvl1 en adelante. Podés ver los
+              tríos activos del clan más abajo.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -68,6 +83,19 @@ export default async function BuddySystemPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {concludedTeams.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-sm text-muted-foreground">
+            Historial de tríos concluidos ({concludedTeams.length})
+          </summary>
+          <div className="mt-3 grid gap-4 lg:grid-cols-2">
+            {concludedTeams.map((t) => (
+              <BuddyTeamCard key={t.id} team={t} isMine={false} availableAspirants={availableAspirants} />
+            ))}
+          </div>
+        </details>
       )}
     </div>
   );

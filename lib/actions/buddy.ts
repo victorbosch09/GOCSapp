@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireCommandStaff } from "@/lib/data/profile";
+import { getMentorRankThreshold, isMentorEligible } from "@/lib/data/buddy";
 import { postToDiscord } from "@/lib/discord";
 
 type ActionResult = { error?: string; success?: true };
@@ -38,16 +39,18 @@ export async function formBuddyTeam(operatorBId: string): Promise<ActionResult> 
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, approved, rank:ranks(name)")
+    .select("id, approved, rank:ranks(sort_order)")
     .in("id", [userId, operatorBId]);
 
   const me = profiles?.find((p) => p.id === userId);
   const other = profiles?.find((p) => p.id === operatorBId);
 
   if (!me || !other) return { error: "Perfil no encontrado." };
-  const rankOk = (p: typeof me) => (p as unknown as { rank: { name: string } | null }).rank?.name === "Operador lvl1";
+  const threshold = await getMentorRankThreshold();
+  const rankOk = (p: typeof me) =>
+    isMentorEligible((p as unknown as { rank: { sort_order: number } | null }).rank?.sort_order, threshold);
   if (!me.approved || !other.approved || !rankOk(me) || !rankOk(other)) {
-    return { error: "Ambos operadores deben ser aprobados y de rango Operador lvl1." };
+    return { error: "Ambos operadores deben ser aprobados y de rango Operador lvl1 o superior." };
   }
 
   const { data: existing } = await admin
