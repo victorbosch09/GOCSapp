@@ -148,6 +148,14 @@
   color: oklch(0.55 0.2 25);
 }
 
+@utility bg-gocs-red {
+  background-color: oklch(0.55 0.2 25);
+}
+
+@utility border-gocs-red {
+  border-color: oklch(0.55 0.2 25);
+}
+
 @utility bg-gocs-carbon {
   background-color: oklch(0.1 0.002 30);
 }

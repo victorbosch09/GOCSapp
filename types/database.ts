@@ -267,6 +267,46 @@ export type PayrollSettings = {
   updated_by: string | null;
 };
 
+export type BuddyTeamStatus = "formando" | "en_entrenamiento" | "listo_para_ascender" | "graduado" | "disuelto";
+
+export type BuddyTeam = {
+  id: string;
+  operator_a_id: string;
+  operator_b_id: string;
+  aspirant_id: string | null;
+  status: BuddyTeamStatus;
+  mando_points: number;
+  formed_at: string;
+  graduated_at: string | null;
+  created_by: string | null;
+};
+
+export type BuddyActivity = {
+  id: string;
+  team_id: string;
+  author_id: string | null;
+  note: string;
+  created_at: string;
+};
+
+export type BuddyRating = {
+  id: string;
+  team_id: string;
+  rated_by: string | null;
+  score: number;
+  note: string | null;
+  created_at: string;
+};
+
+export type BuddyBonus = {
+  id: string;
+  team_id: string;
+  awarded_by: string | null;
+  amount: number;
+  note: string | null;
+  created_at: string;
+};
+
 export type IntegrationSettings = {
   id: boolean;
   discord_webhook_url: string | null;
@@ -450,6 +490,10 @@ export type Database = {
       treasury: TableDef<Treasury, Partial<Treasury>>;
       treasury_transactions: TableDef<TreasuryTransaction, Partial<TreasuryTransaction>>;
       integration_settings: TableDef<IntegrationSettings, Partial<IntegrationSettings>>;
+      buddy_teams: TableDef<BuddyTeam, Partial<BuddyTeam>>;
+      buddy_activities: TableDef<BuddyActivity, Partial<BuddyActivity>>;
+      buddy_ratings: TableDef<BuddyRating, Partial<BuddyRating>>;
+      buddy_bonuses: TableDef<BuddyBonus, Partial<BuddyBonus>>;
     };
     Views: {
       team_overview: ViewDef<TeamOverview>;

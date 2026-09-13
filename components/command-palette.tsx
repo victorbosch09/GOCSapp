@@ -16,6 +16,7 @@ const NAV_COMMANDS: NavCommand[] = [
   { label: "Calendario", href: "/calendario", keywords: "eventos operaciones" },
   { label: "Asistencia", href: "/asistencia" },
   { label: "Entrenamiento", href: "/entrenamiento", keywords: "quiz hoja de vida" },
+  { label: "Buddy System", href: "/buddy-system", keywords: "aspirante mentor equipo" },
 ];
 
 const ADMIN_COMMANDS: NavCommand[] = [
@@ -34,6 +35,7 @@ const ADMIN_COMMANDS: NavCommand[] = [
   { label: "Mando — Asistencia", href: "/admin/asistencia" },
   { label: "Mando — Notificaciones", href: "/admin/notificaciones" },
   { label: "Mando — Entrenamiento", href: "/admin/entrenamiento" },
+  { label: "Mando — Buddy System", href: "/admin/buddy-system" },
 ];
 
 export function CommandPalette({ isCommandStaff = false }: { isCommandStaff?: boolean }) {

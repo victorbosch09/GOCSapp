@@ -19,6 +19,7 @@ const GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
       { href: "/admin/rangos", label: "Rangos" },
       { href: "/admin/sanciones", label: "Sanciones" },
       { href: "/admin/recompensas", label: "Recompensas" },
+      { href: "/admin/buddy-system", label: "Buddy System" },
     ],
   },
   {
