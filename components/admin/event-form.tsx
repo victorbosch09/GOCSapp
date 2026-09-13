@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/actions/admin";
 import { useNow } from "@/lib/hooks/use-now";
 import { useConfirm } from "@/components/ui/confirm-provider";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, clanLocalInputToISO, isoToClanLocalInput } from "@/lib/format";
 import { downloadIcsEvent } from "@/lib/ics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,11 +22,10 @@ const TYPES: { value: EventType; label: string }[] = [
   { value: "otro", label: "Otro" },
 ];
 
-function toLocalInput(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+// Precarga el formulario con la hora de Bogotá (la del clan), no la del
+// navegador de quien está editando — así el valor mostrado siempre
+// coincide con lo que ve todo el mundo en formatDateTime.
+const toLocalInput = isoToClanLocalInput;
 
 export function EventAdmin({ events }: { events: Event[] }) {
   const [title, setTitle] = useState("");
@@ -42,17 +41,16 @@ export function EventAdmin({ events }: { events: Event[] }) {
       return;
     }
     startTransition(async () => {
-      // Convertir a ISO acá, en el navegador: un datetime-local no lleva
-      // zona horaria, y si se manda el texto crudo el servidor lo
-      // interpretaría con SU propia zona (UTC en Vercel), corriendo la hora
-      // real varias horas. El navegador sí sabe la zona horaria real del
-      // usuario, así que la conversión tiene que pasar por acá.
+      // El datetime-local no lleva zona horaria. clanLocalInputToISO lo
+      // interpreta siempre como hora de Bogotá (la del clan) sin importar
+      // en qué zona esté el navegador de quien está cargando el evento, así
+      // que la hora que se guarda es siempre la misma que se va a mostrar.
       const result = await createEvent({
         title,
         description,
         eventType,
-        startAt: new Date(startAt).toISOString(),
-        endAt: endAt ? new Date(endAt).toISOString() : null,
+        startAt: clanLocalInputToISO(startAt),
+        endAt: endAt ? clanLocalInputToISO(endAt) : null,
       });
       if (result?.error) {
         toast.error(result.error);
@@ -165,8 +163,8 @@ function EventRow({ event }: { event: Event }) {
                   title,
                   description,
                   eventType,
-                  startAt: new Date(startAt).toISOString(),
-                  endAt: endAt ? new Date(endAt).toISOString() : null,
+                  startAt: clanLocalInputToISO(startAt),
+                  endAt: endAt ? clanLocalInputToISO(endAt) : null,
                 });
                 if (result?.error) toast.error(result.error);
                 else {
