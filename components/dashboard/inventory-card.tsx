@@ -68,7 +68,7 @@ function InventoryRow({ item }: { item: InventoryItem }) {
             if (
               !(await confirm({
                 title: `¿Vender "${item.item_name}"?`,
-                description: `Recibís ${formatCredits(item.purchase_price)} de vuelta.`,
+                description: `Recibís ${formatCredits(Math.round(item.purchase_price * 0.5))} de vuelta (50% del precio pagado).`,
               }))
             )
               return;
