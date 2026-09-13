@@ -1,5 +1,7 @@
+import { after } from "next/server";
 import { getCurrentProfile, noAdminExistsYet } from "@/lib/data/profile";
 import { getUnreadNotificationCount } from "@/lib/data/dashboard";
+import { checkAndNotifyStartedEvents } from "@/lib/events-notify";
 import { AppNav } from "@/components/app-nav";
 import { PendingApprovalScreen } from "@/components/pending-approval-screen";
 import { RealtimeListener } from "@/components/realtime-listener";
@@ -7,6 +9,10 @@ import { CommandPalette } from "@/components/command-palette";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
+
+  // Chequeo oportunista de "el evento arrancó": corre después de responder
+  // la página (after()), así no le agrega latencia a nadie que la cargue.
+  after(() => checkAndNotifyStartedEvents());
 
   if (!profile.approved) {
     const showFounderClaim = !profile.is_command_staff && (await noAdminExistsYet());

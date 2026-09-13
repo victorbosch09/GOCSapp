@@ -178,6 +178,7 @@ export type Event = {
   event_type: EventType;
   start_at: string;
   end_at: string | null;
+  start_notified_at: string | null;
   created_by: string | null;
   created_at: string;
 };

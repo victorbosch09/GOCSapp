@@ -1,4 +1,6 @@
+import { after } from "next/server";
 import { requireInstructorOrStaff } from "@/lib/data/profile";
+import { checkAndNotifyStartedEvents } from "@/lib/events-notify";
 import { AppNav } from "@/components/app-nav";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { RealtimeListener } from "@/components/realtime-listener";
@@ -6,6 +8,7 @@ import { CommandPalette } from "@/components/command-palette";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireInstructorOrStaff();
+  after(() => checkAndNotifyStartedEvents());
 
   return (
     <div className="flex min-h-screen flex-col">
