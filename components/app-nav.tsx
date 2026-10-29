@@ -16,6 +16,7 @@ const LINKS = [
   { href: "/calendario", label: "Calendario" },
   { href: "/asistencia", label: "Asistencia" },
   { href: "/entrenamiento", label: "Entrenamiento" },
+  { href: "/manual", label: "Manual" },
 ];
 
 export function AppNav({

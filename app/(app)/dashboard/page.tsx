@@ -26,6 +26,7 @@ import { getUpcomingEventsForDashboard, getOwnAttendanceStreak, getOwnAttendance
 import { computeAchievements } from "@/lib/achievements";
 import { AchievementsCard } from "@/components/dashboard/achievements-card";
 import { AttendanceHeatmap } from "@/components/dashboard/attendance-heatmap";
+import { DailyRewardButton } from "@/components/dashboard/daily-reward-button";
 
 export const metadata: Metadata = { title: "Portal — G.O.C.S." };
 
@@ -124,10 +125,16 @@ export default async function DashboardPage() {
               {daysSince(profile.join_date)} días en el clan
             </p>
           </div>
-          <div className="flex flex-col items-start sm:items-end gap-0.5 shrink-0">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Saldo</p>
-            <p className="font-heading text-3xl text-gocs-red">{formatCredits(profile.cached_balance)}</p>
-            <p className="text-xs text-muted-foreground">Próximo pago: {formatDate(nextPaymentDate())}</p>
+          <div className="flex flex-col items-start sm:items-end gap-3 shrink-0">
+            <div className="flex flex-col items-start sm:items-end gap-0.5">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Saldo</p>
+              <p className="font-heading text-3xl text-gocs-red">{formatCredits(profile.cached_balance)}</p>
+              <p className="text-xs text-muted-foreground">Próximo pago: {formatDate(nextPaymentDate())}</p>
+            </div>
+            <DailyRewardButton
+              alreadyClaimed={profile.last_login_date === new Date().toISOString().split("T")[0]}
+              currentStreak={profile.login_streak ?? 0}
+            />
           </div>
         </div>
       </div>

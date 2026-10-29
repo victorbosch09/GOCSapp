@@ -47,6 +47,8 @@ export type Profile = {
   onboarded: boolean;
   cached_balance: number;
   last_seen_at: string | null;
+  login_streak: number;
+  last_login_date: string | null;
   created_at: string;
 };
 

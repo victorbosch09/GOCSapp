@@ -95,6 +95,50 @@ export async function markNotificationRead(notificationId: string): Promise<Acti
   return { success: true };
 }
 
+export async function claimDailyReward(): Promise<ActionResult & { streak?: number; credited?: number }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "No autenticado." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("login_streak, last_login_date, cached_balance")
+    .eq("id", user.id)
+    .single();
+  if (!profile) return { error: "Perfil no encontrado." };
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  if (profile.last_login_date === todayStr) return { error: "Ya reclamaste tu recompensa de hoy." };
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  const newStreak = profile.last_login_date === yesterdayStr ? (profile.login_streak ?? 0) + 1 : 1;
+
+  let credited = 50;
+  let detail = `Acceso diario — Racha día ${newStreak}`;
+  if (newStreak === 7) { credited += 200; detail = "Racha 7 días — bonus de lealtad"; }
+  else if (newStreak === 30) { credited += 500; detail = "Racha 30 días — bonus elite"; }
+
+  const admin = createAdminClient();
+  await admin.from("profiles").update({
+    login_streak: newStreak,
+    last_login_date: todayStr,
+    cached_balance: (profile.cached_balance ?? 0) + credited,
+  }).eq("id", user.id);
+
+  await admin.from("transactions").insert({
+    profile_id: user.id,
+    type: "Bono",
+    amount: credited,
+    detail,
+  });
+
+  revalidatePath("/dashboard");
+  return { success: true, streak: newStreak, credited };
+}
+
 export async function markAllNotificationsRead(notificationIds: string[]): Promise<ActionResult> {
   const supabase = await createClient();
   const {
