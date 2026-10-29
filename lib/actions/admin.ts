@@ -953,3 +953,196 @@ export async function removeSkillEvaluation(evaluationId: string, profileId: str
   revalidatePath("/perfil");
   return { success: true };
 }
+
+// ============================================================
+// OPERACIONES EN LOTE
+// ============================================================
+
+/** Asigna un módulo/habilidad a múltiples operadores de una vez. */
+export async function bulkAssignSkill(input: {
+  profileIds: string[];
+  skillId: string;
+  result: "aprobado" | "en_progreso" | "no_aprobado";
+  notes?: string;
+}): Promise<ActionResult & { count?: number }> {
+  const staff = await requireCommandStaff();
+  if (input.profileIds.length === 0) return { error: "Seleccioná al menos un operador." };
+  if (!input.skillId) return { error: "Seleccioná un módulo o curso." };
+
+  const admin = createAdminClient();
+  const { data: skill } = await admin.from("skills").select("name").eq("id", input.skillId).single();
+
+  const rows = input.profileIds.map((pid) => ({
+    profile_id: pid,
+    skill_id: input.skillId,
+    result: input.result,
+    source: "instructor" as const,
+    notes: input.notes ?? null,
+    evaluated_at: new Date().toISOString(),
+  }));
+
+  const { error } = await admin.from("skill_evaluations").insert(rows);
+  if (error) return { error: error.message };
+
+  await logAudit(
+    staff.id,
+    "bulk_assign_skill",
+    null,
+    `${skill?.name ?? input.skillId} → ${input.result} · ${input.profileIds.length} operadores`
+  );
+
+  revalidatePath("/admin/soldados");
+  revalidatePath("/admin/entrenamiento");
+  revalidatePath("/perfil");
+  return { success: true, count: input.profileIds.length };
+}
+
+/** Otorga un bono a múltiples operadores de una vez. */
+export async function bulkAwardBonus(input: {
+  profileIds: string[];
+  amount: number;
+  detail: string;
+  notes?: string;
+}): Promise<ActionResult & { count?: number }> {
+  const staff = await requireCommandStaff();
+  if (input.profileIds.length === 0) return { error: "Seleccioná al menos un operador." };
+  if (!input.amount || input.amount <= 0) return { error: "El monto debe ser mayor a cero." };
+  if (!input.detail.trim()) return { error: "El detalle es obligatorio." };
+
+  const admin = createAdminClient();
+  const rows = input.profileIds.map((pid) => ({
+    profile_id: pid,
+    type: "Bono" as TransactionType,
+    detail: input.detail,
+    amount: input.amount,
+    notes: input.notes ?? null,
+    created_by: staff.id,
+  }));
+
+  const { error } = await admin.from("transactions").insert(rows);
+  if (error) return { error: error.message };
+
+  await logAudit(
+    staff.id,
+    "bulk_bonus",
+    null,
+    `${input.detail} · ${input.amount} cr · ${input.profileIds.length} operadores`
+  );
+
+  revalidatePath("/admin/soldados");
+  revalidatePath("/dashboard");
+  return { success: true, count: input.profileIds.length };
+}
+
+/** Aplica una sanción económica a múltiples operadores de una vez. */
+export async function bulkApplySanction(input: {
+  profileIds: string[];
+  severity: SanctionSeverity;
+  description: string;
+  amountDeducted: number | null;
+}): Promise<ActionResult & { count?: number }> {
+  const staff = await requireCommandStaff();
+  if (input.profileIds.length === 0) return { error: "Seleccioná al menos un operador." };
+  if (!input.description.trim()) return { error: "La descripción es obligatoria." };
+
+  const admin = createAdminClient();
+  const amount = input.amountDeducted ? Math.abs(input.amountDeducted) : null;
+
+  for (const pid of input.profileIds) {
+    let transactionId: string | null = null;
+    if (amount && amount > 0) {
+      const { data: txn, error: txnErr } = await admin
+        .from("transactions")
+        .insert({
+          profile_id: pid,
+          type: "Descuento" as TransactionType,
+          detail: `Sanción en lote (${input.severity})`,
+          amount: -amount,
+          notes: input.description,
+          created_by: staff.id,
+        })
+        .select("id")
+        .single();
+      if (txnErr) return { error: txnErr.message };
+      transactionId = txn.id;
+    }
+
+    const { error: sErr } = await admin.from("sanctions").insert({
+      profile_id: pid,
+      sanction_type_id: null,
+      severity: input.severity,
+      description: input.description,
+      amount_deducted: amount,
+      applied_by: staff.id,
+      transaction_id: transactionId,
+    });
+    if (sErr) return { error: sErr.message };
+  }
+
+  await logAudit(
+    staff.id,
+    "bulk_sanction",
+    null,
+    `${input.severity} · ${input.description} · ${input.profileIds.length} operadores`
+  );
+
+  revalidatePath("/admin/sanciones");
+  revalidatePath("/admin/soldados");
+  revalidatePath("/dashboard");
+  return { success: true, count: input.profileIds.length };
+}
+
+/** Otorga una recompensa a múltiples operadores de una vez. */
+export async function bulkAwardReward(input: {
+  profileIds: string[];
+  title: string;
+  description: string;
+  amount: number | null;
+}): Promise<ActionResult & { count?: number }> {
+  const staff = await requireCommandStaff();
+  if (input.profileIds.length === 0) return { error: "Seleccioná al menos un operador." };
+  if (!input.title.trim()) return { error: "El título es obligatorio." };
+
+  const admin = createAdminClient();
+
+  for (const pid of input.profileIds) {
+    let transactionId: string | null = null;
+    if (input.amount && input.amount > 0) {
+      const { data: txn, error: txnErr } = await admin
+        .from("transactions")
+        .insert({
+          profile_id: pid,
+          type: "Ajuste Manual" as TransactionType,
+          detail: `Recompensa: ${input.title}`,
+          amount: input.amount,
+          notes: input.description || null,
+          created_by: staff.id,
+        })
+        .select("id")
+        .single();
+      if (txnErr) return { error: txnErr.message };
+      transactionId = txn.id;
+    }
+
+    const { error: rErr } = await admin.from("rewards").insert({
+      profile_id: pid,
+      title: input.title,
+      description: input.description || null,
+      amount: input.amount,
+      awarded_by: staff.id,
+      transaction_id: transactionId,
+    });
+    if (rErr) return { error: rErr.message };
+  }
+
+  await logAudit(
+    staff.id,
+    "bulk_reward",
+    null,
+    `${input.title} · ${input.profileIds.length} operadores`
+  );
+
+  revalidatePath("/admin/recompensas");
+  revalidatePath("/dashboard");
+  return { success: true, count: input.profileIds.length };
+}

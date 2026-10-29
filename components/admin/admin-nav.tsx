@@ -17,6 +17,7 @@ const GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/admin/soldados", label: "Soldados" },
       { href: "/admin/rangos", label: "Rangos" },
+      { href: "/admin/operaciones-masivas", label: "Lote" },
       { href: "/admin/sanciones", label: "Sanciones" },
       { href: "/admin/recompensas", label: "Recompensas" },
     ],
