@@ -107,69 +107,47 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       {!profile.onboarded && <OnboardingModal />}
-      <div className="flex items-center gap-3">
-        <Avatar size="lg">
-          {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.callsign} />}
-          <AvatarFallback>{profile.callsign.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="font-heading text-2xl">Portal de operador</h1>
-          <p className="text-muted-foreground">
-            {profile.callsign}
-            {profile.squad ? ` · Escuadra ${profile.squad}` : ""}
-          </p>
+
+      {/* ── Hero ── */}
+      <div className="card-tactical p-5 sm:p-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+          <Avatar size="lg" className="h-20 w-20 shrink-0 border-2 border-primary/40">
+            {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.callsign} />}
+            <AvatarFallback className="font-heading text-2xl bg-muted">{profile.callsign.slice(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-heading text-3xl tracking-wide">{profile.callsign}</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {rankLabel(profile)}
+              {profile.squad ? ` · Escuadra ${profile.squad}` : ""}
+              {" · "}
+              {daysSince(profile.join_date)} días en el clan
+            </p>
+          </div>
+          <div className="flex flex-col items-start sm:items-end gap-0.5 shrink-0">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Saldo</p>
+            <p className="font-heading text-3xl text-gocs-red">{formatCredits(profile.cached_balance)}</p>
+            <p className="text-xs text-muted-foreground">Próximo pago: {formatDate(nextPaymentDate())}</p>
+          </div>
         </div>
       </div>
 
       <TacticalTipCard />
-
       <UpcomingEventsCard events={upcomingEvents} />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Rango</CardDescription>
-            <CardTitle className="font-heading text-lg">{rankLabel(profile)}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Sueldo semanal</CardDescription>
-            <CardTitle className="font-heading text-lg">
-              {formatCredits(profile.rank?.weekly_wage ?? 0)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Saldo actual</CardDescription>
-            <CardTitle className="font-heading text-lg text-gocs-red">
-              {formatCredits(profile.cached_balance)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Próximo pago</CardDescription>
-            <CardTitle className="font-heading text-lg">
-              {formatDate(nextPaymentDate())}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Antigüedad</CardDescription>
-            <CardTitle className="font-heading text-lg">{daysSince(profile.join_date)} días</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Racha de asistencia</CardDescription>
-            <CardTitle className="font-heading text-lg">
-              {attendanceStreak > 0 ? `${attendanceStreak} eventos seguidos` : "Sin racha activa"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      {/* ── Stat grid ── */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Rango", value: rankLabel(profile) },
+          { label: "Sueldo semanal", value: formatCredits(profile.rank?.weekly_wage ?? 0) },
+          { label: "Antigüedad", value: `${daysSince(profile.join_date)}d` },
+          { label: "Racha asistencia", value: attendanceStreak > 0 ? `${attendanceStreak} ev.` : "—" },
+        ].map((s) => (
+          <div key={s.label} className="stat-tile">
+            <p className="stat-tile-label">{s.label}</p>
+            <p className="stat-tile-value">{s.value}</p>
+          </div>
+        ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -178,7 +156,6 @@ export default async function DashboardPage() {
       </div>
 
       <AchievementsCard achievements={achievements} />
-
       <AttendanceHeatmap history={attendanceHistory} />
 
       <div className="grid gap-6 lg:grid-cols-3">

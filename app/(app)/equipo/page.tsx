@@ -17,8 +17,8 @@ export const metadata: Metadata = { title: "Equipo — G.O.C.S." };
 
 function Bar({ pct }: { pct: number }) {
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-      <div className="h-full bg-gocs-red" style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: "oklch(0.52 0.20 25)" }} />
     </div>
   );
 }
@@ -71,39 +71,18 @@ export default async function EquipoPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Soldados activos</CardDescription>
-            <CardTitle className="font-heading text-2xl">
-              {overview?.total_soldados_activos ?? 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Nómina semanal total</CardDescription>
-            <CardTitle className="font-heading text-2xl">
-              {formatCredits(overview?.nomina_semanal_total ?? 0)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Gasto en armamento</CardDescription>
-            <CardTitle className="font-heading text-2xl text-gocs-red">
-              {formatCredits(overview?.gasto_total_armamento ?? 0)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Próximos eventos</CardDescription>
-            <CardTitle className="font-heading text-2xl">
-              {overview?.proximos_eventos_count ?? 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Soldados activos", value: overview?.total_soldados_activos ?? 0 },
+          { label: "Nómina semanal", value: formatCredits(overview?.nomina_semanal_total ?? 0) },
+          { label: "Gasto armamento", value: formatCredits(overview?.gasto_total_armamento ?? 0) },
+          { label: "Próximos eventos", value: overview?.proximos_eventos_count ?? 0 },
+        ].map((s) => (
+          <div key={s.label} className="stat-tile">
+            <p className="stat-tile-label">{s.label}</p>
+            <p className="stat-tile-value">{s.value}</p>
+          </div>
+        ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

@@ -11,18 +11,14 @@ export default async function TiendaPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="card-tactical p-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-heading text-2xl">Tienda</h1>
-          <p className="text-muted-foreground">
-            Armamento, equipamiento, accesorios y vehículos del clan.
-          </p>
+          <p className="text-muted-foreground text-sm">Armamento, equipamiento, accesorios y vehículos del clan.</p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Tu saldo</p>
-          <p className="font-heading text-2xl text-gocs-red">
-            {formatCredits(profile.cached_balance)}
-          </p>
+        <div className="flex flex-col sm:items-end gap-0.5 mt-2 sm:mt-0">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Tu saldo</p>
+          <p className="font-heading text-3xl text-gocs-red">{formatCredits(profile.cached_balance)}</p>
         </div>
       </div>
 
