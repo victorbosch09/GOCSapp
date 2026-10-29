@@ -121,7 +121,7 @@ export function AppNav({
       </aside>
 
       {/* ─────────── MOBILE TOP BAR ─────────── */}
-      <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between h-14 px-4 bg-gocs-carbon/95 backdrop-blur border-b border-white/6 print:hidden">
+      <header className="lg:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between h-14 px-4 bg-gocs-carbon/95 backdrop-blur border-b border-white/6 print:hidden">
         <GocsWordmark />
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (

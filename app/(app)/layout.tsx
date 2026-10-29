@@ -38,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* Desktop: offset for sidebar. Mobile: offset for top bar + bottom tab bar */}
       <main
         id="main-content"
-        className="flex-1 lg:ml-56 px-4 py-6 pb-24 lg:pb-8 pt-20 lg:pt-8 max-w-full"
+        className="flex-1 lg:ml-56 px-4 pb-24 lg:pb-8 pt-16 lg:pt-8 max-w-full"
       >
         <div className="mx-auto max-w-5xl">
           {children}
