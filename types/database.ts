@@ -10,6 +10,16 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+export type RankRequirements = {
+  modules?: number[];
+  contracts?: number;
+  specialty_courses?: number;
+  leadership_course?: string;
+  requires_vote?: boolean;
+  previous_rank_abbr?: string;
+  note?: string;
+};
+
 export type Rank = {
   id: string;
   name: string;
@@ -17,6 +27,7 @@ export type Rank = {
   weekly_wage: number;
   description: string | null;
   promotion_requirement: string | null;
+  requirements_json: RankRequirements | null;
   sort_order: number;
   created_at: string;
 };
@@ -179,6 +190,10 @@ export type Event = {
   start_at: string;
   end_at: string | null;
   start_notified_at: string | null;
+  instructor_id: string | null;
+  max_participants: number | null;
+  requires_signup: boolean;
+  discord_poll_message_id: string | null;
   created_by: string | null;
   created_at: string;
 };
@@ -238,6 +253,8 @@ export type Skill = {
 
 export type SkillResult = "aprobado" | "no_aprobado" | "en_progreso";
 
+export type EvaluationSource = "instructor" | "quiz" | "bot";
+
 export type SkillEvaluation = {
   id: string;
   profile_id: string;
@@ -246,6 +263,7 @@ export type SkillEvaluation = {
   score: number | null;
   notes: string | null;
   evaluated_by: string | null;
+  source: EvaluationSource;
   evaluated_at: string;
 };
 
