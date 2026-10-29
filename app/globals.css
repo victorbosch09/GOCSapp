@@ -288,6 +288,11 @@
   }
 }
 
+/* Mobile safe-area bottom padding for bottom tab bar */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
 /* ─────────────────────────────────────────────
    PRINT
 ───────────────────────────────────────────── */

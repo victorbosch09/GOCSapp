@@ -45,12 +45,18 @@ export default async function EquipoPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl">Equipo G.O.C.S.</h1>
-        <p className="text-muted-foreground">
-          Estadísticas del clan, escalafón general y preparación operativa. Los saldos
-          individuales son privados.
-        </p>
+      <div
+        className="relative overflow-hidden rounded-xl border border-white/8 p-6"
+        style={{ background: "linear-gradient(135deg, oklch(0.16 0.006 240), oklch(0.13 0.004 240) 70%, oklch(0.45 0.18 145 / 12%) 100%)" }}
+      >
+        <div className="pointer-events-none absolute -top-8 -right-8 h-36 w-36 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="relative">
+          <p className="text-[10px] uppercase tracking-widest text-emerald-400 mb-1">G.O.C.S. · Fuerza Activa</p>
+          <h1 className="font-heading text-3xl">Equipo G.O.C.S.</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Escalafón, estadísticas del clan y preparación operativa. Saldos individuales privados.
+          </p>
+        </div>
       </div>
 
       {announcements.length > 0 && (

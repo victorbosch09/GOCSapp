@@ -25,7 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const unreadCount = await getUnreadNotificationCount();
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen">
       <a
         href="#main-content"
         className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-primary focus-visible:px-3 focus-visible:py-2 focus-visible:text-primary-foreground"
@@ -35,8 +35,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <RealtimeListener profileId={profile.id} />
       <CommandPalette isCommandStaff={profile.is_command_staff} />
       <AppNav isCommandStaff={profile.is_command_staff} unreadCount={unreadCount} />
-      <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        {children}
+      {/* Desktop: offset for sidebar. Mobile: offset for top bar + bottom tab bar */}
+      <main
+        id="main-content"
+        className="flex-1 lg:ml-56 px-4 py-6 pb-24 lg:pb-8 pt-20 lg:pt-8 max-w-full"
+      >
+        <div className="mx-auto max-w-5xl">
+          {children}
+        </div>
       </main>
     </div>
   );

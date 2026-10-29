@@ -75,79 +75,74 @@ export default async function PerfilPage() {
   const initials = profile.callsign.slice(0, 2).toUpperCase();
 
   return (
-    <div className="mx-auto max-w-4xl flex flex-col gap-8">
+    <div className="mx-auto max-w-4xl flex flex-col gap-6">
 
-      {/* ── Service Card Header ── */}
-      <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
-        <div className="h-1.5 w-full bg-gradient-to-r from-primary via-primary/60 to-transparent" />
-        <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start">
-          <Avatar className="h-20 w-20 shrink-0 border-2 border-primary/40">
-            <AvatarImage src={profile.avatar_url ?? undefined} alt={profile.callsign} />
-            <AvatarFallback className="font-heading text-2xl bg-muted">{initials}</AvatarFallback>
-          </Avatar>
-
-          <div className="flex-1 flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-heading text-2xl">{profile.callsign}</h1>
-              {profile.is_command_staff && (
-                <Badge className="bg-primary/20 text-primary border-primary/30">Mando</Badge>
-              )}
-              {profile.is_instructor && (
-                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Instructor</Badge>
+      {/* ── SERVICE RECORD HEADER ── */}
+      <div
+        className="relative overflow-hidden rounded-xl border border-white/8"
+        style={{ background: "linear-gradient(135deg, oklch(0.16 0.006 240), oklch(0.13 0.004 240) 70%, oklch(0.52 0.20 25 / 10%) 100%)" }}
+      >
+        <div className="pointer-events-none absolute -top-8 -right-8 h-40 w-40 rounded-full bg-primary/8 blur-3xl" />
+        <div className="relative p-6">
+          <div className="flex items-start gap-5">
+            <Avatar className="h-20 w-20 shrink-0 border-2 border-primary/50 shadow-[0_0_20px_oklch(0.52_0.20_25/25%)]">
+              <AvatarImage src={profile.avatar_url ?? undefined} alt={profile.callsign} />
+              <AvatarFallback className="font-heading text-2xl bg-muted">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                {rank && <span className="font-heading text-xs text-primary uppercase tracking-widest">[{rank.abbreviation}]</span>}
+                <h1 className="font-heading text-3xl">{profile.callsign}</h1>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground uppercase tracking-wider">
+                {rank?.name ?? "Sin rango"}
+                {profile.squad ? ` · Escuadra ${profile.squad}` : ""}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {profile.is_command_staff && <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">Alto Mando</Badge>}
+                {profile.is_instructor && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">Instructor</Badge>}
+                {approvedLeadershipCourses.map((c) => (
+                  <Badge key={c} className="bg-amber-500/15 text-amber-400 border-amber-500/20 text-xs">{c}</Badge>
+                ))}
+              </div>
+              {(profile as { bio?: string | null }).bio && (
+                <p className="mt-2 text-sm text-muted-foreground/80 italic">{(profile as { bio: string }).bio}</p>
               )}
             </div>
-
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              {rank && (
-                <span>
-                  <span className="font-heading text-foreground font-semibold">[{rank.abbreviation}]</span>{" "}
-                  {rank.name}
-                </span>
-              )}
-              {profile.squad && <span>Escuadra {profile.squad}</span>}
-              <span>Ingresó el {formatDate(profile.join_date)}</span>
-              <span>{daysSince(profile.join_date)} días en el clan</span>
-            </div>
-
-            {(profile as { bio?: string | null }).bio && (
-              <p className="text-sm text-muted-foreground italic">{(profile as { bio: string }).bio}</p>
-            )}
-
-            {profile.discord_username && (
-              <p className="text-xs text-muted-foreground">Discord: @{profile.discord_username}</p>
-            )}
           </div>
-        </div>
 
-        {/* Stats strip */}
-        <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
-          {[
-            { label: "Contratos", value: contracts.length },
-            { label: "Módulos aprobados", value: approvedModuleNumbers.length },
-            { label: "Cursos especializados", value: approvedSpecialtyCourses },
-            { label: "Racha asistencia", value: attendanceStreak },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-card px-4 py-3 text-center">
-              <p className="font-heading text-xl">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-            </div>
-          ))}
+          {/* Stats strip */}
+          <div className="mt-5 grid grid-cols-4 divide-x divide-white/8 rounded-lg border border-white/8 bg-black/20">
+            {[
+              { label: "Contratos", value: contracts.length },
+              { label: "Módulos", value: approvedModuleNumbers.length },
+              { label: "Cursos esp.", value: approvedSpecialtyCourses },
+              { label: "Racha", value: attendanceStreak },
+            ].map((s) => (
+              <div key={s.label} className="flex flex-col items-center py-3 px-1 gap-0.5">
+                <p className="font-heading text-xl sm:text-2xl">{s.value}</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {profile.discord_username && (
+            <p className="mt-3 text-xs text-muted-foreground">Discord: <span className="text-foreground/70">@{profile.discord_username}</span></p>
+          )}
         </div>
       </div>
 
       {/* ── Achievements ── */}
       {achievements.length > 0 && (
         <section>
-          <h2 className="font-heading mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-            Condecoraciones y Logros
-          </h2>
+          <p className="section-header"><span className="h-1 w-3 rounded-full bg-primary shrink-0" />Condecoraciones</p>
           <div className="flex flex-wrap gap-2">
             {achievements.map((a) => (
               <span
                 key={a.id}
-                className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1.5 text-sm"
+                className="flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/5 px-3 py-2 text-sm font-medium"
               >
-                {a.emoji} {a.label}
+                <span className="text-base">{a.emoji}</span> {a.label}
               </span>
             ))}
           </div>
@@ -157,9 +152,7 @@ export default async function PerfilPage() {
       {/* ── Rewards ── */}
       {rewards.length > 0 && (
         <section>
-          <h2 className="font-heading mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-            Recompensas y Reconocimientos
-          </h2>
+          <p className="section-header"><span className="h-1 w-3 rounded-full bg-emerald-500 shrink-0" />Recompensas y Reconocimientos</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {(rewards as Array<{ id: string; title: string; description?: string | null; amount?: number | null }>).map((r) => (
               <div
@@ -185,9 +178,7 @@ export default async function PerfilPage() {
       {/* ── Sanctions ── */}
       {sanctions.length > 0 && (
         <section>
-          <h2 className="font-heading mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-            Sanciones ({sanctions.length})
-          </h2>
+          <p className="section-header"><span className="h-1 w-3 rounded-full bg-destructive shrink-0" />Sanciones ({sanctions.length})</p>
           <div className="flex flex-col gap-2">
             {(sanctions as Array<{ id: string; severity: string; description?: string | null; amount_deducted?: number | null }>).map((s) => (
               <div
@@ -209,9 +200,7 @@ export default async function PerfilPage() {
 
       {/* ── Career Grid ── */}
       <section>
-        <h2 className="font-heading mb-1 text-sm uppercase tracking-wide text-muted-foreground">
-          Carrera — Módulos y Cursos
-        </h2>
+        <p className="section-header"><span className="h-1 w-3 rounded-full bg-primary shrink-0" />Carrera — Módulos y Cursos</p>
         <p className="mb-4 text-xs text-muted-foreground">
           Solo evaluaciones cargadas por instructores o mando. Los quizzes de autoevaluación no cuentan aquí.
         </p>
@@ -223,9 +212,7 @@ export default async function PerfilPage() {
 
       {/* ── Rank Progression ── */}
       <section>
-        <h2 className="font-heading mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-          Progresión de Rango
-        </h2>
+        <p className="section-header"><span className="h-1 w-3 rounded-full bg-primary shrink-0" />Progresión de Rango</p>
         <RankProgression
           allRanks={allRanks}
           currentRankId={profile.rank_id}

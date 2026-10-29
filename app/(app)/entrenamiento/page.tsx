@@ -37,11 +37,18 @@ export default async function EntrenamientoPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="card-tactical p-5">
-        <h1 className="font-heading text-2xl">Entrenamiento</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Tu hoja de vida, tus quizzes y la biblioteca de material de estudio del clan.
-        </p>
+      <div
+        className="relative overflow-hidden rounded-xl border border-white/8 p-6"
+        style={{ background: "linear-gradient(135deg, oklch(0.16 0.006 240), oklch(0.13 0.004 240) 70%, oklch(0.45 0.15 220 / 15%) 100%)" }}
+      >
+        <div className="pointer-events-none absolute -top-8 -right-8 h-36 w-36 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="relative">
+          <p className="text-[10px] uppercase tracking-widest text-blue-400 mb-1">G.O.C.S. · Módulo de Instrucción</p>
+          <h1 className="font-heading text-3xl">Entrenamiento</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Tu hoja de vida, quizzes y biblioteca de material de estudio del clan.
+          </p>
+        </div>
       </div>
 
       <TrainingStatsCard stats={stats} />
