@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOperatorPortalData } from "@/lib/data/admin";
+import { getOperatorPortalData, getAllSkillsForAdmin, getOperatorEvaluations } from "@/lib/data/admin";
 import { requireCommandStaff } from "@/lib/data/profile";
 import { formatCredits, formatDate, formatDateTime, rankLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { SkillEvalPanel } from "@/components/admin/skill-eval-panel";
 
 export const metadata: Metadata = { title: "Portal del operador — Mando G.O.C.S." };
 
@@ -42,7 +43,11 @@ export default async function AdminOperatorPortalPage({
 }) {
   await requireCommandStaff();
   const { id } = await params;
-  const data = await getOperatorPortalData(id);
+  const [data, allSkills, instructorEvals] = await Promise.all([
+    getOperatorPortalData(id),
+    getAllSkillsForAdmin(),
+    getOperatorEvaluations(id),
+  ]);
 
   if (!data.profile) notFound();
   const profile = data.profile;
@@ -102,6 +107,16 @@ export default async function AdminOperatorPortalPage({
             <CardDescription>Estado</CardDescription>
             <CardTitle className="font-heading text-lg">
               {profile.approved ? "Aprobado" : "Pendiente"}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Última actividad</CardDescription>
+            <CardTitle className="font-heading text-base">
+              {(profile as unknown as { last_seen_at: string | null }).last_seen_at
+                ? formatDateTime((profile as unknown as { last_seen_at: string }).last_seen_at)
+                : "Sin registro"}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -268,6 +283,22 @@ export default async function AdminOperatorPortalPage({
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-base">Módulos y Cursos — Carrera</CardTitle>
+          <CardDescription>
+            Solo evaluaciones de instructores. Registrá aprobaciones directamente aquí.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SkillEvalPanel
+            profileId={id}
+            allSkills={allSkills}
+            evaluations={instructorEvals}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

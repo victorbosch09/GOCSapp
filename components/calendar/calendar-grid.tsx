@@ -200,7 +200,7 @@ export function CalendarGrid({
                   <div
                     key={idx}
                     className={cn(
-                      "min-h-[80px] border-b border-r border-border/40 p-1.5",
+                      "min-h-[110px] border-b border-r border-border/40 p-1.5",
                       idx % 7 === 6 && "border-r-0",
                       idx >= cells.length - 7 && "border-b-0",
                       !day && "bg-muted/10"

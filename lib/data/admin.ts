@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Contract, Profile, Rank, Reward, Sanction, Transaction } from "@/types/database";
 
 export async function getAllProfiles() {
@@ -192,4 +193,29 @@ export async function getRecentNotifications() {
     .order("created_at", { ascending: false })
     .limit(20);
   return data ?? [];
+}
+
+export async function getAllSkillsForAdmin() {
+  const admin = createAdminClient();
+  const { data } = await admin.from("skills").select("id, name, category").order("sort_order", { ascending: true });
+  return (data ?? []) as { id: string; name: string; category: string | null }[];
+}
+
+export async function getOperatorEvaluations(profileId: string) {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("skill_evaluations")
+    .select("id, skill_id, result, source, notes, evaluated_at, skill:skills(name, category)")
+    .eq("profile_id", profileId)
+    .neq("source", "quiz")
+    .order("evaluated_at", { ascending: false });
+  return (data ?? []) as unknown as {
+    id: string;
+    skill_id: string;
+    result: string;
+    source: string;
+    notes: string | null;
+    evaluated_at: string;
+    skill: { name: string; category: string | null } | null;
+  }[];
 }

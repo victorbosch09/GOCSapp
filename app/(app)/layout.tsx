@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { getCurrentProfile, noAdminExistsYet } from "@/lib/data/profile";
 import { getUnreadNotificationCount } from "@/lib/data/dashboard";
 import { checkAndNotifyStartedEvents } from "@/lib/events-notify";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AppNav } from "@/components/app-nav";
 import { PendingApprovalScreen } from "@/components/pending-approval-screen";
 import { RealtimeListener } from "@/components/realtime-listener";
@@ -10,9 +11,11 @@ import { CommandPalette } from "@/components/command-palette";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const profile = await getCurrentProfile();
 
-  // Chequeo oportunista de "el evento arrancó": corre después de responder
-  // la página (after()), así no le agrega latencia a nadie que la cargue.
   after(() => checkAndNotifyStartedEvents());
+  after(() => {
+    const admin = createAdminClient();
+    admin.from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("id", profile.id).then(() => {});
+  });
 
   if (!profile.approved) {
     const showFounderClaim = !profile.is_command_staff && (await noAdminExistsYet());

@@ -914,3 +914,42 @@ export async function deleteEvent(eventId: string): Promise<ActionResult> {
   revalidatePath("/calendario");
   return { success: true };
 }
+
+export async function addSkillEvaluation(input: {
+  profileId: string;
+  skillId: string;
+  result: "aprobado" | "no_aprobado" | "en_progreso";
+  notes?: string;
+}): Promise<ActionResult> {
+  const actor = await requireCommandStaff();
+  const admin = createAdminClient();
+
+  const { error } = await admin.from("skill_evaluations").insert({
+    profile_id: input.profileId,
+    skill_id: input.skillId,
+    result: input.result,
+    evaluated_by: actor.id,
+    notes: input.notes || null,
+    source: "instructor",
+  });
+
+  if (error) return { error: error.message };
+
+  await logAudit(actor.id, "add_skill_evaluation", input.profileId,
+    `Módulo/curso: ${input.skillId} → ${input.result}`);
+
+  revalidatePath(`/admin/soldados/${input.profileId}`);
+  revalidatePath("/perfil");
+  return { success: true };
+}
+
+export async function removeSkillEvaluation(evaluationId: string, profileId: string): Promise<ActionResult> {
+  const actor = await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("skill_evaluations").delete().eq("id", evaluationId);
+  if (error) return { error: error.message };
+  await logAudit(actor.id, "remove_skill_evaluation", profileId, `Eliminada evaluación ${evaluationId}`);
+  revalidatePath(`/admin/soldados/${profileId}`);
+  revalidatePath("/perfil");
+  return { success: true };
+}

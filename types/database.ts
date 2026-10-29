@@ -46,6 +46,7 @@ export type Profile = {
   discord_username: string | null;
   onboarded: boolean;
   cached_balance: number;
+  last_seen_at: string | null;
   created_at: string;
 };
 

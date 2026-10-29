@@ -248,6 +248,7 @@ export function SoldadosTable({
                 className="text-right"
               />
               <TableHead>Estado</TableHead>
+              <TableHead>Último acceso</TableHead>
               <TableHead>Mando</TableHead>
               <TableHead>Instructor</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -256,7 +257,7 @@ export function SoldadosTable({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-6 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={9} className="py-6 text-center text-sm text-muted-foreground">
                   Ningún soldado coincide con el filtro.
                 </TableCell>
               </TableRow>
@@ -363,6 +364,11 @@ function SoldadoRow({
         ) : (
           <Badge variant="outline">Pendiente</Badge>
         )}
+      </TableCell>
+      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+        {(profile as unknown as { last_seen_at: string | null }).last_seen_at
+          ? formatDate((profile as unknown as { last_seen_at: string }).last_seen_at)
+          : "—"}
       </TableCell>
       <TableCell>
         <Switch
