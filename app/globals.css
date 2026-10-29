@@ -163,10 +163,10 @@
 /* Card hover lift */
 @utility card-hover {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-@utility card-hover:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 20px oklch(0 0 0 / 30%);
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px oklch(0 0 0 / 30%);
+  }
 }
 
 /* Stat number */
