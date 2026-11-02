@@ -15,10 +15,53 @@ const RANKS = [
 ];
 
 const MODULES = [
-  { cat: "Básico", items: ["Protocolo de comunicaciones", "Uso de equipamiento estándar", "Reglas de enfrentamiento", "Mapa y navegación táctica"] },
-  { cat: "Combate", items: ["CQB (Combate en espacios cerrados)", "Supresión y fuego de apoyo", "Tácticas de infiltración", "Extracción bajo fuego"] },
-  { cat: "Especialización", items: ["Francotirador avanzado", "Demoliciones y explosivos", "Reconocimiento aéreo", "Guerra electrónica básica"] },
-  { cat: "Liderazgo", items: ["Gestión de escuadra", "Planificación táctica", "Briefs de operación", "Evaluación post-misión"] },
+  {
+    cat: "Módulos de Instrucción",
+    items: [
+      "Mod 1 — Controles Básicos y Organización",
+      "Mod 2 — Saltos, Repliegues y CQB Básico",
+      "Mod 3 — CQB Avanzado",
+      "Mod 4 — Operaciones Aerotransportadas",
+      "Mod 5 — Movimientos de Equipo y Coordinación",
+      "Mod 6 — Reconocimiento y Vigilancia",
+      "Mod 7 — Navegación Táctica",
+      "Mod 8 — Asalto y Defensa",
+      "Mod 9 — Interacción Civil y ROE",
+      "Mod 10 — Logística y Apoyo",
+      "Mod 11 — Comunicaciones Avanzadas",
+    ],
+  },
+  {
+    cat: "Cursos Especializados",
+    items: [
+      "Curso Rol Especializado",
+      "Primeros Auxilios",
+      "Ametrallador",
+      "Granadero",
+      "Rappel",
+      "Experto en Shooting Drill",
+      "Francotirador",
+      "Operador de Drones",
+      "Conductor Táctico",
+    ],
+  },
+  {
+    cat: "Cursos de Liderazgo",
+    items: [
+      "Curso Líder de Equipo",
+      "Curso Líder de Escuadra",
+    ],
+  },
+  {
+    cat: "Cursos de Especialista (Avanzado)",
+    items: [
+      "JTAC",
+      "Navegación y Tiro de Precisión",
+      "MOUT Avanzado",
+      "Inteligencia Táctica y ROE",
+      "Logística y COMSEC",
+    ],
+  },
 ];
 
 const SPECIALTIES = [
@@ -120,7 +163,7 @@ export default function ManualPage() {
           <span className="h-1 w-3 rounded-full bg-primary shrink-0" />
           Módulos de Entrenamiento
         </p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           {MODULES.map((m) => (
             <div key={m.cat} className="card-tactical p-4 flex flex-col gap-3">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">{m.cat}</p>
