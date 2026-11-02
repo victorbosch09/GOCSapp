@@ -79,6 +79,26 @@ export type Vehicle = {
   created_at: string;
 };
 
+export type StoreSection = {
+  id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+};
+
+export type StoreSectionItem = {
+  id: string;
+  section_id: string;
+  category: string;
+  name: string;
+  price: number;
+  stock: number;
+  image_url: string | null;
+  notes: string | null;
+  min_rank_sort_order: number | null;
+  created_at: string;
+};
+
 export type TransactionType =
   | "Sueldo"
   | "Bono"
@@ -516,6 +536,8 @@ export type Database = {
       buddy_activities: TableDef<BuddyActivity, Partial<BuddyActivity>>;
       buddy_ratings: TableDef<BuddyRating, Partial<BuddyRating>>;
       buddy_bonuses: TableDef<BuddyBonus, Partial<BuddyBonus>>;
+      store_sections: TableDef<StoreSection, Partial<StoreSection>>;
+      store_section_items: TableDef<StoreSectionItem, Partial<StoreSectionItem>>;
     };
     Views: {
       team_overview: ViewDef<TeamOverview>;

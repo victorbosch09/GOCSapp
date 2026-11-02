@@ -24,7 +24,7 @@ export default async function AdminCatalogoPage() {
           <CardDescription>Click en el cuadro de imagen para subir una nueva.</CardDescription>
         </CardHeader>
         <CardContent>
-          <CatalogEditor data={catalog} ranks={ranks} />
+          <CatalogEditor data={catalog} ranks={ranks} customSections={catalog.customSections} />
         </CardContent>
       </Card>
     </div>

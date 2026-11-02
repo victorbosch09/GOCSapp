@@ -1170,3 +1170,65 @@ export async function bulkAwardReward(input: {
   revalidatePath("/dashboard");
   return { success: true, count: input.profileIds.length };
 }
+
+// ============================================================
+// TIENDA — secciones personalizadas
+// ============================================================
+export async function createStoreSection(name: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("store_sections")
+    .insert({ name: name.trim(), sort_order: Date.now() });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  return { success: true };
+}
+
+export async function deleteStoreSection(sectionId: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("store_sections").delete().eq("id", sectionId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  return { success: true };
+}
+
+export async function createStoreSectionItem(
+  sectionId: string,
+  data: { category: string; name: string; price: number; notes?: string | null }
+): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("store_section_items").insert({
+    section_id: sectionId,
+    category: data.category,
+    name: data.name,
+    price: data.price,
+    notes: data.notes ?? null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  return { success: true };
+}
+
+export async function updateStoreSectionItem(
+  itemId: string,
+  patch: Partial<{ category: string; name: string; price: number; stock: number; notes: string | null; min_rank_sort_order: number | null }>
+): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("store_section_items").update(patch).eq("id", itemId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  return { success: true };
+}
+
+export async function deleteStoreSectionItem(itemId: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("store_section_items").delete().eq("id", itemId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogo");
+  return { success: true };
+}
