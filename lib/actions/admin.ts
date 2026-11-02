@@ -224,9 +224,33 @@ export async function deleteTransaction(transactionId: string): Promise<ActionRe
 }
 
 // ============================================================
-// RANGOS — editar sueldo/descripción/requisito (no se permite borrar:
+// RANGOS — crear, editar sueldo/descripción/requisito (no se permite borrar:
 // romper la referencia de un rango en uso dejaría soldados sin rango)
 // ============================================================
+export async function createRank(data: {
+  name: string;
+  abbreviation: string;
+  weekly_wage: number;
+  description?: string;
+  promotion_requirement?: string;
+  sort_order: number;
+}): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("ranks").insert({
+    name: data.name.trim(),
+    abbreviation: data.abbreviation.trim().toUpperCase(),
+    weekly_wage: data.weekly_wage,
+    description: data.description?.trim() || null,
+    promotion_requirement: data.promotion_requirement?.trim() || null,
+    sort_order: data.sort_order,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/rangos");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function updateRank(
   rankId: string,
   patch: {
