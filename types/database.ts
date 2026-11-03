@@ -27,11 +27,26 @@ export type Rank = {
   name: string;
   abbreviation: string;
   weekly_wage: number;
+  bonus_multiplier: number;
   description: string | null;
   promotion_requirement: string | null;
   requirements_json: RankRequirements | null;
   sort_order: number;
   created_at: string;
+};
+
+export type WeaponRental = {
+  id: string;
+  profile_id: string;
+  lent_by_id: string;
+  item_name: string;
+  item_category: string;
+  notes: string | null;
+  rented_at: string;
+  expires_at: string;
+  returned_at: string | null;
+  rental_fee: number;
+  status: "active" | "returned" | "expired";
 };
 
 export type Profile = {

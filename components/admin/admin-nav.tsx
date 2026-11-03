@@ -38,6 +38,7 @@ const GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
       { href: "/admin/calendario", label: "Calendario" },
       { href: "/admin/asistencia", label: "Asistencia" },
       { href: "/admin/notificaciones", label: "Notificaciones" },
+      { href: "/admin/armeria", label: "Armería" },
     ],
   },
   {

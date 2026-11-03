@@ -257,6 +257,7 @@ export async function updateRank(
     name?: string;
     abbreviation?: string;
     weekly_wage?: number;
+    bonus_multiplier?: number;
     description?: string | null;
     promotion_requirement?: string | null;
     requirements_json?: Record<string, unknown> | null;
@@ -478,20 +479,41 @@ export async function logContract(input: {
     }
   }
 
-  const { error } = await admin.rpc("log_contract", {
-    p_profile_ids: input.profileIds,
-    p_risk_level: input.riskLevel,
-    p_bonuses: input.bonusLabels,
-    p_total_amount: total,
-    p_logged_by: staff.id,
-    p_notes: input.notes || null,
-  });
+  // Apply per-operator rank bonus_multiplier (Manual Económico 2026)
+  const { data: operatorRanks } = await admin
+    .from("profiles")
+    .select("id, rank:ranks(bonus_multiplier)")
+    .in("id", input.profileIds);
 
-  if (error) return { error: error.message };
+  const multiplierMap = new Map<string, number>();
+  for (const op of operatorRanks ?? []) {
+    const m = (op.rank as { bonus_multiplier?: number } | null)?.bonus_multiplier ?? 1.0;
+    multiplierMap.set(op.id, m);
+  }
+
+  // Log contract per operator with individual multiplied amount
+  const results = await Promise.all(
+    input.profileIds.map((pid) => {
+      const multiplier = multiplierMap.get(pid) ?? 1.0;
+      const operatorTotal = Math.round(total * multiplier);
+      return admin.rpc("log_contract", {
+        p_profile_ids: [pid],
+        p_risk_level: input.riskLevel,
+        p_bonuses: input.bonusLabels,
+        p_total_amount: operatorTotal,
+        p_logged_by: staff.id,
+        p_notes: input.notes || null,
+      });
+    })
+  );
+
+  const firstError = results.find((r) => r.error);
+  if (firstError?.error) return { error: firstError.error.message };
   revalidatePath("/admin/soldados");
   revalidatePath("/dashboard");
   return { success: true };
 }
+
 
 export async function deleteContract(contractId: string): Promise<ActionResult> {
   await requireCommandStaff();
@@ -1459,4 +1481,55 @@ export async function createRecurringExpense(data: {
   if (error) return { error: error.message };
   revalidatePath("/admin/gastos");
   return { success: true };
+}
+
+// ============================================================
+// RENTAS DE ARMAMENTO
+// ============================================================
+export async function createWeaponRental(input: {
+  profileId: string;
+  itemName: string;
+  itemCategory: string;
+  notes?: string;
+  expiresAt: string;
+  rentalFee?: number;
+}): Promise<ActionResult> {
+  const staff = await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("weapon_rentals" as never).insert({
+    profile_id: input.profileId,
+    lent_by_id: staff.id,
+    item_name: input.itemName.trim(),
+    item_category: input.itemCategory,
+    notes: input.notes?.trim() || null,
+    expires_at: input.expiresAt,
+    rental_fee: input.rentalFee ?? 0,
+    status: "active",
+  } as never);
+  if (error) return { error: (error as { message: string }).message };
+  revalidatePath("/admin/armeria");
+  return { success: true };
+}
+
+export async function returnWeaponRental(rentalId: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("weapon_rentals" as never)
+    .update({ status: "returned", returned_at: new Date().toISOString() } as never)
+    .eq("id", rentalId);
+  if (error) return { error: (error as { message: string }).message };
+  revalidatePath("/admin/armeria");
+  return { success: true };
+}
+
+export async function listWeaponRentals(): Promise<{ data: unknown[] | null; error: string | null }> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("weapon_rentals" as never)
+    .select("*, borrower:profiles!weapon_rentals_profile_id_fkey(callsign), lender:profiles!weapon_rentals_lent_by_id_fkey(callsign)")
+    .order("rented_at", { ascending: false });
+  if (error) return { data: null, error: (error as { message: string }).message };
+  return { data: data ?? [], error: null };
 }

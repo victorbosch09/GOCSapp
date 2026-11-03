@@ -233,6 +233,7 @@ function RankCard({ rank }: { rank: Rank }) {
   const [name, setName] = useState(rank.name);
   const [abbreviation, setAbbreviation] = useState(rank.abbreviation);
   const [wage, setWage] = useState(String(rank.weekly_wage));
+  const [multiplier, setMultiplier] = useState(String(rank.bonus_multiplier ?? 1.0));
   const [description, setDescription] = useState(rank.description ?? "");
   const [requirement, setRequirement] = useState(rank.promotion_requirement ?? "");
   const reqs = rank.requirements_json ?? {};
@@ -251,6 +252,8 @@ function RankCard({ rank }: { rank: Rank }) {
   function save() {
     const parsedWage = Number(wage);
     if (Number.isNaN(parsedWage) || parsedWage < 0) { toast.error("Sueldo inválido."); return; }
+    const parsedMultiplier = Number(multiplier);
+    if (Number.isNaN(parsedMultiplier) || parsedMultiplier < 0) { toast.error("Multiplicador inválido."); return; }
     if (!name.trim()) { toast.error("El nombre es requerido."); return; }
     if (!abbreviation.trim()) { toast.error("La abreviatura es requerida."); return; }
 
@@ -272,6 +275,7 @@ function RankCard({ rank }: { rank: Rank }) {
         name: name.trim(),
         abbreviation: abbreviation.trim().toUpperCase(),
         weekly_wage: parsedWage,
+        bonus_multiplier: parsedMultiplier,
         description: description.trim() || null,
         promotion_requirement: requirement.trim() || null,
         requirements_json: Object.keys(requirements_json).length ? requirements_json : null,
@@ -334,6 +338,10 @@ function RankCard({ rank }: { rank: Rank }) {
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs">Sueldo semanal (cr)</Label>
               <Input type="number" min={0} value={wage} onChange={(e) => { setWage(e.target.value); mark(); }} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">Multiplicador de bono (ej: 1.30)</Label>
+              <Input type="number" min={0} step={0.01} value={multiplier} onChange={(e) => { setMultiplier(e.target.value); mark(); }} placeholder="1.00" />
             </div>
           </div>
 
