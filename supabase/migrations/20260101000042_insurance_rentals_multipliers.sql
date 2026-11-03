@@ -28,17 +28,17 @@ DELETE FROM public.recurring_expenses
   WHERE name ILIKE '%seguro%' AND name NOT ILIKE '%operador%' AND name NOT ILIKE '%premium%';
 
 INSERT INTO public.recurring_expenses
-  (name, description, base_amount, scales_with, scale_rate, frequency, is_active, sort_order)
+  (name, description, category, base_amount, scales_with, scale_rate, frequency, is_active, sort_order)
 VALUES
   ('Seguro Básico',
    'Cobertura básica: atención médica inicial, estabilización y reposición parcial de equipo. Destinado a candidatos y personal en etapa inicial.',
-   0, 'soldiers', 75, 'weekly', true, 1),
+   'Seguro', 0, 'soldiers', 75, 'weekly', true, 1),
   ('Seguro de Operador',
    'Cobertura táctica: evacuación operacional, reposición de equipo reglamentario, rehabilitación e indemnización ampliada. Personal operativo regular.',
-   0, 'soldiers', 125, 'weekly', true, 2),
+   'Seguro', 0, 'soldiers', 125, 'weekly', true, 2),
   ('Seguro Premium',
    'Cobertura total: evacuación prioritaria, atención avanzada, reposición ampliada y protección adicional para operaciones de alto riesgo.',
-   0, 'soldiers', 200, 'weekly', false, 3)
+   'Seguro', 0, 'soldiers', 200, 'weekly', false, 3)
 ON CONFLICT DO NOTHING;
 
 -- ── 4. Weapon rentals table ───────────────────────────────────
