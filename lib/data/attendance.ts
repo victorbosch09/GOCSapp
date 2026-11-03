@@ -114,22 +114,37 @@ export async function getOwnAttendanceHistory(limit = 60): Promise<AttendanceHis
 
   if (!events || events.length === 0) return [];
 
-  const { data: attendance } = await supabase
-    .from("event_attendance")
-    .select("event_id, attended")
-    .eq("profile_id", user.id)
-    .in(
-      "event_id",
-      events.map((e) => e.id)
-    );
+  const eventIds = events.map((e) => e.id);
 
-  const byEvent = new Map((attendance ?? []).map((a) => [a.event_id, a.attended]));
+  const [{ data: attendance }, { data: rsvps }] = await Promise.all([
+    supabase
+      .from("event_attendance")
+      .select("event_id, attended")
+      .eq("profile_id", user.id)
+      .in("event_id", eventIds),
+    supabase
+      .from("event_rsvps")
+      .select("event_id, response")
+      .eq("profile_id", user.id)
+      .in("event_id", eventIds),
+  ]);
+
+  const byAttendance = new Map((attendance ?? []).map((a) => [a.event_id, a.attended]));
+  const byRsvp = new Map((rsvps ?? []).map((r) => [r.event_id, r.response]));
 
   return events
     .map((e) => {
-      const attended = byEvent.get(e.id);
-      const status: AttendanceHistoryEntry["status"] =
-        attended === undefined ? "sin_marcar" : attended ? "asistio" : "falto";
+      const attended = byAttendance.get(e.id);
+      const rsvp = byRsvp.get(e.id);
+      let status: AttendanceHistoryEntry["status"];
+      if (attended !== undefined) {
+        status = attended ? "asistio" : "falto";
+      } else if (rsvp === "no_asiste") {
+        // Soldier explicitly marked absence — treat as falto even if mando hasn't confirmed
+        status = "falto";
+      } else {
+        status = "sin_marcar";
+      }
       return { eventId: e.id, title: e.title, startAt: e.start_at, status };
     })
     .reverse();
