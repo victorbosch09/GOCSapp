@@ -30,6 +30,8 @@ const GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
       { href: "/admin/movimientos", label: "Movimientos" },
       { href: "/admin/contratos", label: "Contratos" },
       { href: "/admin/nomina", label: "Nómina" },
+      { href: "/admin/mercado", label: "Mercado Internacional" },
+      { href: "/admin/gastos", label: "Gastos Recurrentes" },
     ],
   },
   {

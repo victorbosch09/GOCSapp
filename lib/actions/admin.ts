@@ -1232,3 +1232,169 @@ export async function deleteStoreSectionItem(itemId: string): Promise<ActionResu
   revalidatePath("/admin/catalogo");
   return { success: true };
 }
+
+// ============================================================
+// MERCADO INTERNACIONAL
+// ============================================================
+export async function buyFromMarket(input: {
+  marketItemId: string;
+  quantity: number;
+  targetTable?: string | null;
+  targetItemId?: string | null;
+  notes?: string;
+}): Promise<ActionResult> {
+  const staff = await requireCommandStaff();
+  if (input.quantity < 1) return { error: "La cantidad debe ser al menos 1." };
+  const admin = createAdminClient();
+
+  // Fetch market item to get price
+  const { data: item, error: itemErr } = await admin
+    .from("market_items")
+    .select("unit_cost, name, in_stock")
+    .eq("id", input.marketItemId)
+    .single();
+  if (itemErr || !item) return { error: "Ítem no encontrado." };
+  if (!item.in_stock) return { error: "Ítem sin stock disponible en el mercado." };
+
+  const totalCost = item.unit_cost * input.quantity;
+
+  // Deduct from treasury
+  const { error: txErr } = await admin.from("treasury_transactions").insert({
+    type: "armamento" as const,
+    amount: -totalCost,
+    detail: `Mercado Internacional: ${item.name} x${input.quantity}`,
+    created_by: staff.id,
+  });
+  if (txErr) return { error: txErr.message };
+
+  // Record purchase
+  await admin.from("market_purchases").insert({
+    market_item_id: input.marketItemId,
+    quantity: input.quantity,
+    unit_cost: item.unit_cost,
+    total_cost: totalCost,
+    target_table: input.targetTable ?? null,
+    target_item_id: input.targetItemId ?? null,
+    purchased_by: staff.id,
+    notes: input.notes ?? null,
+  });
+
+  // If linked to a store item, increment its stock
+  if (input.targetTable && input.targetItemId) {
+    const validTables = ["weapons", "equipment", "accessories", "vehicles"] as const;
+    type StoreTable = typeof validTables[number];
+    if (validTables.includes(input.targetTable as StoreTable)) {
+      const { data: storeItem } = await admin
+        .from(input.targetTable as StoreTable)
+        .select("stock")
+        .eq("id", input.targetItemId)
+        .single();
+      if (storeItem) {
+        await admin
+          .from(input.targetTable as StoreTable)
+          .update({ stock: (storeItem as { stock: number }).stock + input.quantity })
+          .eq("id", input.targetItemId);
+      }
+    }
+  }
+
+  revalidatePath("/admin/mercado");
+  revalidatePath("/admin/tesoreria");
+  revalidatePath("/admin/catalogo");
+  return { success: true };
+}
+
+export async function createMarketItem(data: {
+  category: string;
+  name: string;
+  description?: string;
+  unit_cost: number;
+}): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("market_items").insert({
+    category: data.category.trim(),
+    name: data.name.trim(),
+    description: data.description?.trim() || null,
+    unit_cost: data.unit_cost,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/mercado");
+  return { success: true };
+}
+
+// ============================================================
+// GASTOS RECURRENTES
+// ============================================================
+export async function payRecurringExpense(input: {
+  expenseId: string;
+  amountPaid: number;
+  periodLabel: string;
+  notes?: string;
+}): Promise<ActionResult> {
+  const staff = await requireCommandStaff();
+  if (input.amountPaid <= 0) return { error: "El monto debe ser mayor a 0." };
+  const admin = createAdminClient();
+
+  const { data: expense } = await admin
+    .from("recurring_expenses")
+    .select("name")
+    .eq("id", input.expenseId)
+    .single();
+  if (!expense) return { error: "Gasto no encontrado." };
+
+  // Deduct from treasury
+  const { error: txErr } = await admin.from("treasury_transactions").insert({
+    type: "gastos_generales" as const,
+    amount: -input.amountPaid,
+    detail: `Gasto recurrente: ${expense.name} — ${input.periodLabel}`,
+    created_by: staff.id,
+  });
+  if (txErr) return { error: txErr.message };
+
+  await admin.from("expense_payments").insert({
+    expense_id: input.expenseId,
+    amount_paid: input.amountPaid,
+    period_label: input.periodLabel,
+    paid_by: staff.id,
+    notes: input.notes ?? null,
+  });
+
+  revalidatePath("/admin/gastos");
+  revalidatePath("/admin/tesoreria");
+  return { success: true };
+}
+
+export async function toggleRecurringExpense(expenseId: string, active: boolean): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("recurring_expenses").update({ is_active: active }).eq("id", expenseId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/gastos");
+  return { success: true };
+}
+
+export async function createRecurringExpense(data: {
+  name: string;
+  description?: string;
+  category: string;
+  base_amount: number;
+  scales_with?: string | null;
+  scale_rate?: number;
+  frequency: "weekly" | "monthly";
+}): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("recurring_expenses").insert({
+    name: data.name.trim(),
+    description: data.description?.trim() || null,
+    category: data.category.trim(),
+    base_amount: data.base_amount,
+    scales_with: data.scales_with ?? null,
+    scale_rate: data.scale_rate ?? 0,
+    frequency: data.frequency,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/gastos");
+  return { success: true };
+}

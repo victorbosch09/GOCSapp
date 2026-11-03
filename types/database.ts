@@ -79,6 +79,55 @@ export type Vehicle = {
   created_at: string;
 };
 
+export type MarketItem = {
+  id: string;
+  category: string;
+  name: string;
+  description: string | null;
+  unit_cost: number;
+  image_url: string | null;
+  in_stock: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+export type MarketPurchase = {
+  id: string;
+  market_item_id: string;
+  quantity: number;
+  unit_cost: number;
+  total_cost: number;
+  target_table: string | null;
+  target_item_id: string | null;
+  purchased_by: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type RecurringExpense = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  base_amount: number;
+  scales_with: string | null;
+  scale_rate: number;
+  frequency: "weekly" | "monthly";
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+export type ExpensePayment = {
+  id: string;
+  expense_id: string;
+  amount_paid: number;
+  period_label: string;
+  paid_by: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export type StoreSection = {
   id: string;
   name: string;
@@ -538,6 +587,10 @@ export type Database = {
       buddy_bonuses: TableDef<BuddyBonus, Partial<BuddyBonus>>;
       store_sections: TableDef<StoreSection, Partial<StoreSection>>;
       store_section_items: TableDef<StoreSectionItem, Partial<StoreSectionItem>>;
+      market_items: TableDef<MarketItem, Partial<MarketItem>>;
+      market_purchases: TableDef<MarketPurchase, Partial<MarketPurchase>>;
+      recurring_expenses: TableDef<RecurringExpense, Partial<RecurringExpense>>;
+      expense_payments: TableDef<ExpensePayment, Partial<ExpensePayment>>;
     };
     Views: {
       team_overview: ViewDef<TeamOverview>;
