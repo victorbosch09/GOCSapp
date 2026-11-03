@@ -1533,3 +1533,36 @@ export async function listWeaponRentals(): Promise<{ data: unknown[] | null; err
   if (error) return { data: null, error: (error as { message: string }).message };
   return { data: data ?? [], error: null };
 }
+
+// ============================================================
+// MERCADO — delete / toggle stock
+// ============================================================
+export async function deleteMarketItem(itemId: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("market_items" as never).delete().eq("id", itemId);
+  if (error) return { error: (error as { message: string }).message };
+  revalidatePath("/admin/mercado");
+  return { success: true };
+}
+
+export async function toggleMarketItemStock(itemId: string, inStock: boolean): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("market_items" as never).update({ in_stock: inStock } as never).eq("id", itemId);
+  if (error) return { error: (error as { message: string }).message };
+  revalidatePath("/admin/mercado");
+  return { success: true };
+}
+
+// ============================================================
+// GASTOS — delete
+// ============================================================
+export async function deleteRecurringExpense(expenseId: string): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const { error } = await admin.from("recurring_expenses" as never).delete().eq("id", expenseId);
+  if (error) return { error: (error as { message: string }).message };
+  revalidatePath("/admin/gastos");
+  return { success: true };
+}

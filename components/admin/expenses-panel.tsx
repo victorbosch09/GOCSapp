@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { payRecurringExpense, toggleRecurringExpense, createRecurringExpense } from "@/lib/actions/admin";
+import { payRecurringExpense, toggleRecurringExpense, createRecurringExpense, deleteRecurringExpense } from "@/lib/actions/admin";
 import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Plus, AlertTriangle, TrendingDown, Users, Truck, Crosshair } from "lucide-react";
+import { Plus, AlertTriangle, TrendingDown, Users, Truck, Crosshair, Trash2 } from "lucide-react";
 import type { RecurringExpense, ExpensePayment } from "@/types/database";
 
 type ExpenseWithPayments = RecurringExpense & { payments?: ExpensePayment[] };
@@ -141,6 +141,7 @@ function ExpenseRow({
   totalWeaponStock: number;
 }) {
   const [pending, startTransition] = useTransition();
+  const [delPending, startDelTransition] = useTransition();
   const [payOpen, setPayOpen] = useState(false);
   const [period, setPeriod] = useState("");
 
@@ -155,6 +156,15 @@ function ExpenseRow({
       const result = await toggleRecurringExpense(expense.id, active);
       if (result?.error) toast.error(result.error);
       else toast.success(active ? `"${expense.name}" activado.` : `"${expense.name}" desactivado.`);
+    });
+  }
+
+  function handleDelete() {
+    if (!confirm(`¿Eliminar "${expense.name}"? Esta acción no se puede deshacer.`)) return;
+    startDelTransition(async () => {
+      const r = await deleteRecurringExpense(expense.id);
+      if (r.error) toast.error(r.error);
+      else toast.success(`"${expense.name}" eliminado.`);
     });
   }
 
@@ -198,6 +208,9 @@ function ExpenseRow({
         </div>
 
         <Switch checked={expense.is_active} onCheckedChange={handleToggle} disabled={pending} />
+        <Button size="sm" variant="ghost" onClick={handleDelete} disabled={delPending} title="Eliminar" className="text-destructive hover:text-destructive px-2">
+          <Trash2 size={14} />
+        </Button>
 
         <Dialog open={payOpen} onOpenChange={setPayOpen}>
           <DialogTrigger asChild>

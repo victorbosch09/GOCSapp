@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { buyFromMarket, createMarketItem } from "@/lib/actions/admin";
+import { buyFromMarket, createMarketItem, deleteMarketItem, toggleMarketItemStock } from "@/lib/actions/admin";
 import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShoppingCart, Plus, Clock } from "lucide-react";
+import { ShoppingCart, Plus, Clock, Trash2, PowerOff, Power } from "lucide-react";
 import type { MarketItem } from "@/types/database";
 
 type StoreItem = { id: string; name: string; category: string; table: "weapons" | "equipment" | "accessories" | "vehicles" };
@@ -122,6 +122,25 @@ export function MarketPanel({
 
 function MarketItemCard({ item, storeItems }: { item: MarketItem; storeItems: StoreItem[] }) {
   const [open, setOpen] = useState(false);
+  const [delPending, startDelTransition] = useTransition();
+  const [stockPending, startStockTransition] = useTransition();
+
+  function handleDelete() {
+    if (!confirm(`¿Eliminar "${item.name}" del mercado? Esta acción no se puede deshacer.`)) return;
+    startDelTransition(async () => {
+      const r = await deleteMarketItem(item.id);
+      if (r.error) toast.error(r.error);
+      else toast.success(`"${item.name}" eliminado.`);
+    });
+  }
+
+  function handleToggleStock() {
+    startStockTransition(async () => {
+      const r = await toggleMarketItemStock(item.id, !item.in_stock);
+      if (r.error) toast.error(r.error);
+      else toast.success(item.in_stock ? `"${item.name}" marcado como agotado.` : `"${item.name}" marcado como disponible.`);
+    });
+  }
   const [qty, setQty] = useState("1");
   const [targetItemId, setTargetItemId] = useState<string>("");
   const [pending, startTransition] = useTransition();
@@ -160,12 +179,19 @@ function MarketItemCard({ item, storeItems }: { item: MarketItem; storeItems: St
         </div>
         {!item.in_stock && <Badge variant="outline" className="text-destructive shrink-0">Agotado</Badge>}
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-widest">Precio unitario</p>
           <p className="font-heading text-lg text-primary">{formatCredits(item.unit_cost)}</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <div className="flex items-center gap-1.5">
+          <Button size="sm" variant="ghost" onClick={handleToggleStock} disabled={stockPending} title={item.in_stock ? "Marcar agotado" : "Marcar disponible"} className="text-muted-foreground hover:text-foreground px-2">
+            {item.in_stock ? <PowerOff size={14} /> : <Power size={14} />}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleDelete} disabled={delPending} title="Eliminar" className="text-destructive hover:text-destructive px-2">
+            <Trash2 size={14} />
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" disabled={!item.in_stock} className="gap-1.5">
               <ShoppingCart size={13} /> Comprar
@@ -219,6 +245,7 @@ function MarketItemCard({ item, storeItems }: { item: MarketItem; storeItems: St
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </div>
   );
