@@ -129,7 +129,8 @@ export async function getAuditLog(limit = 50) {
  * páginas ya protegidas por requireCommandStaff().
  */
 export async function getOperatorPortalData(profileId: string) {
-  const supabase = await createClient();
+  // Admin client bypasses RLS so mando can read any soldier's data
+  const admin = createAdminClient();
 
   const [
     { data: profile },
@@ -138,35 +139,42 @@ export async function getOperatorPortalData(profileId: string) {
     { data: inventory },
     { data: evaluations },
     { data: quizAttempts },
+    { data: attendance },
   ] = await Promise.all([
-    supabase.from("profiles").select("*, rank:ranks(*)").eq("id", profileId).single(),
-    supabase
+    admin.from("profiles").select("*, rank:ranks(*)").eq("id", profileId).single(),
+    admin
       .from("transactions")
       .select("*")
       .eq("profile_id", profileId)
       .order("created_at", { ascending: false })
       .limit(30),
-    supabase
+    admin
       .from("contracts")
       .select("*")
       .eq("profile_id", profileId)
-      .order("created_at", { ascending: false })
-      .limit(15),
-    supabase
+      .order("contract_date", { ascending: false })
+      .limit(30),
+    admin
       .from("inventory")
       .select("*")
       .eq("profile_id", profileId)
       .order("acquired_at", { ascending: false }),
-    supabase
+    admin
       .from("skill_evaluations")
       .select("*, skill:skills(name)")
       .eq("profile_id", profileId)
       .order("evaluated_at", { ascending: false }),
-    supabase
+    admin
       .from("quiz_attempts")
       .select("*, quiz:quizzes(title)")
       .eq("profile_id", profileId)
       .order("completed_at", { ascending: false }),
+    admin
+      .from("event_attendance")
+      .select("*, event:events(title, event_date)")
+      .eq("profile_id", profileId)
+      .order("marked_at", { ascending: false })
+      .limit(30),
   ]);
 
   return {
@@ -182,6 +190,12 @@ export async function getOperatorPortalData(profileId: string) {
     quizAttempts: (quizAttempts ?? []) as unknown as (import("@/types/database").QuizAttempt & {
       quiz: { title: string } | null;
     })[],
+    attendance: (attendance ?? []) as unknown as {
+      id: string;
+      attended: boolean;
+      marked_at: string;
+      event: { title: string; event_date: string } | null;
+    }[],
   };
 }
 

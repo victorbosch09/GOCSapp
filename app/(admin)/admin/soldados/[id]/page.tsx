@@ -286,6 +286,38 @@ export default async function AdminOperatorPortalPage({
 
       <Card>
         <CardHeader>
+          <CardTitle className="font-heading text-base">Asistencia</CardTitle>
+          <CardDescription>Últimos {data.attendance.length} registros de eventos.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {data.attendance.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin registros de asistencia todavía.</p>
+          ) : (
+            data.attendance.map((a) => (
+              <div
+                key={a.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/60 p-2.5 text-sm"
+              >
+                <div>
+                  <p className="font-medium">{a.event?.title ?? "Evento"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {a.event?.event_date ? formatDate(a.event.event_date) : formatDate(a.marked_at)}
+                  </p>
+                </div>
+                <Badge
+                  className={a.attended ? "bg-emerald-500/15 text-emerald-400" : "bg-destructive/15 text-destructive"}
+                  variant="secondary"
+                >
+                  {a.attended ? "Presente" : "Ausente"}
+                </Badge>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="font-heading text-base">Módulos y Cursos — Carrera</CardTitle>
           <CardDescription>
             Solo evaluaciones de instructores. Registrá aprobaciones directamente aquí.
