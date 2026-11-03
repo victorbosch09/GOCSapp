@@ -35,6 +35,14 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useConfirm } from "@/components/ui/confirm-provider";
@@ -396,44 +404,115 @@ function SoldadoRow({
           }
         />
       </TableCell>
-      <TableCell className="flex justify-end gap-2">
-        {!profile.approved && (
-          <Button
-            size="sm"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await approveProfile(profile.id);
-                if (result?.error) toast.error(result.error);
-                else toast.success("Ingreso aprobado.");
-              })
-            }
-          >
-            Aprobar
-          </Button>
-        )}
-        <Button size="sm" variant="outline" asChild>
-          <Link href={`/admin/soldados/${profile.id}`}>Ver portal</Link>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          title="Copiar ID interno"
-          onClick={() => {
-            navigator.clipboard.writeText(profile.id);
-            toast.success("ID copiado.");
-          }}
-        >
-          Copiar ID
-        </Button>
-        <AdjustmentDialog profileId={profile.id} callsign={profile.callsign} />
-        <LedgerDialog profileId={profile.id} callsign={profile.callsign} />
-        <InventoryDialog profileId={profile.id} callsign={profile.callsign} />
-        {profile.id !== currentProfileId && (
-          <DeleteAccountDialog profileId={profile.id} callsign={profile.callsign} pending={pending} startTransition={startTransition} />
-        )}
+      <TableCell className="text-right">
+        <ActionsMenu
+          profile={profile}
+          pending={pending}
+          startTransition={startTransition}
+          currentProfileId={currentProfileId}
+        />
       </TableCell>
     </TableRow>
+  );
+}
+
+function ActionsMenu({
+  profile,
+  pending,
+  startTransition,
+  currentProfileId,
+}: {
+  profile: ProfileRow;
+  pending: boolean;
+  startTransition: TransitionStartFunction;
+  currentProfileId: string;
+}) {
+  const [adjOpen, setAdjOpen] = useState(false);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
+  const [invOpen, setInvOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+            <MoreHorizontal size={16} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href={`/admin/soldados/${profile.id}`}>Ver portal</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              navigator.clipboard.writeText(profile.id);
+              toast.success("ID copiado.");
+            }}
+          >
+            Copiar ID
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {!profile.approved && (
+            <DropdownMenuItem
+              disabled={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await approveProfile(profile.id);
+                  if (result?.error) toast.error(result.error);
+                  else toast.success("Ingreso aprobado.");
+                })
+              }
+            >
+              Aprobar ingreso
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem onClick={() => setAdjOpen(true)}>Ajuste manual</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setLedgerOpen(true)}>Movimientos</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setInvOpen(true)}>Inventario</DropdownMenuItem>
+          {profile.id !== currentProfileId && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                Borrar cuenta
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AdjustmentDialog
+        profileId={profile.id}
+        callsign={profile.callsign}
+        open={adjOpen}
+        onOpenChange={setAdjOpen}
+      />
+      <LedgerDialog
+        profileId={profile.id}
+        callsign={profile.callsign}
+        open={ledgerOpen}
+        onOpenChange={setLedgerOpen}
+      />
+      <InventoryDialog
+        profileId={profile.id}
+        callsign={profile.callsign}
+        open={invOpen}
+        onOpenChange={setInvOpen}
+      />
+      {profile.id !== currentProfileId && (
+        <DeleteAccountDialog
+          profileId={profile.id}
+          callsign={profile.callsign}
+          pending={pending}
+          startTransition={startTransition}
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+        />
+      )}
+    </>
   );
 }
 
@@ -442,13 +521,16 @@ function DeleteAccountDialog({
   callsign,
   pending,
   startTransition,
+  open,
+  onOpenChange,
 }: {
   profileId: string;
   callsign: string;
   pending: boolean;
   startTransition: TransitionStartFunction;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const canDelete = confirmText.trim() === callsign;
 
@@ -456,7 +538,7 @@ function DeleteAccountDialog({
     <Dialog
       open={open}
       onOpenChange={(v) => {
-        setOpen(v);
+        onOpenChange(v);
         if (!v) setConfirmText("");
       }}
     >
@@ -489,7 +571,7 @@ function DeleteAccountDialog({
                 if (result?.error) toast.error(result.error);
                 else {
                   toast.success("Cuenta borrada.");
-                  setOpen(false);
+                  onOpenChange(false);
                 }
               });
             }}
@@ -502,8 +584,17 @@ function DeleteAccountDialog({
   );
 }
 
-function AdjustmentDialog({ profileId, callsign }: { profileId: string; callsign: string }) {
-  const [open, setOpen] = useState(false);
+function AdjustmentDialog({
+  profileId,
+  callsign,
+  open,
+  onOpenChange,
+}: {
+  profileId: string;
+  callsign: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
@@ -520,7 +611,7 @@ function AdjustmentDialog({ profileId, callsign }: { profileId: string; callsign
         toast.error(result.error);
       } else {
         toast.success("Ajuste aplicado.");
-        setOpen(false);
+        onOpenChange(false);
         setAmount("");
         setNotes("");
       }
@@ -528,12 +619,7 @@ function AdjustmentDialog({ profileId, callsign }: { profileId: string; callsign
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Ajustar
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Ajuste manual — {callsign}</DialogTitle>
@@ -573,8 +659,17 @@ function RowSkeletons({ count = 4 }: { count?: number }) {
   );
 }
 
-function LedgerDialog({ profileId, callsign }: { profileId: string; callsign: string }) {
-  const [open, setOpen] = useState(false);
+function LedgerDialog({
+  profileId,
+  callsign,
+  open,
+  onOpenChange,
+}: {
+  profileId: string;
+  callsign: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [, startTransition] = useTransition();
 
@@ -589,12 +684,7 @@ function LedgerDialog({ profileId, callsign }: { profileId: string; callsign: st
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Movimientos
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Libro de movimientos — {callsign}</DialogTitle>
@@ -619,8 +709,17 @@ function LedgerDialog({ profileId, callsign }: { profileId: string; callsign: st
   );
 }
 
-function InventoryDialog({ profileId, callsign }: { profileId: string; callsign: string }) {
-  const [open, setOpen] = useState(false);
+function InventoryDialog({
+  profileId,
+  callsign,
+  open,
+  onOpenChange,
+}: {
+  profileId: string;
+  callsign: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const [items, setItems] = useState<InventoryItem[] | null>(null);
 
   useEffect(() => {
@@ -630,12 +729,7 @@ function InventoryDialog({ profileId, callsign }: { profileId: string; callsign:
   }, [open, profileId]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Inventario
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Inventario de {callsign}</DialogTitle>
