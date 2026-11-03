@@ -4,8 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function getMarketData() {
   const admin = createAdminClient();
   const [itemsRes, purchasesRes, catalogRes] = await Promise.all([
-    admin.from("market_items").select("*").order("category").order("sort_order"),
-    admin.from("market_purchases").select("*, market_item:market_items(name,category)").order("created_at", { ascending: false }).limit(50),
+    admin.from("market_items" as never).select("*").order("category").order("sort_order"),
+    admin.from("market_purchases" as never).select("*, market_item:market_items(name,category)").order("created_at", { ascending: false }).limit(50),
     Promise.all([
       admin.from("weapons").select("id,name,category").order("name"),
       admin.from("equipment").select("id,name,category").order("name"),
@@ -32,8 +32,8 @@ export async function getMarketData() {
 export async function getExpensesData() {
   const admin = createAdminClient();
   const [expensesRes, paymentsRes, soldierCountRes, vehicleStockRes, weaponStockRes] = await Promise.all([
-    admin.from("recurring_expenses").select("*").order("sort_order"),
-    admin.from("expense_payments").select("*").order("created_at", { ascending: false }).limit(100),
+    admin.from("recurring_expenses" as never).select("*").order("sort_order"),
+    admin.from("expense_payments" as never).select("*").order("created_at", { ascending: false }).limit(100),
     admin.from("profiles").select("id", { count: "exact", head: true }).eq("approved", true),
     admin.from("vehicles").select("stock"),
     admin.from("weapons").select("stock"),
