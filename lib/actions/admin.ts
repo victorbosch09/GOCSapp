@@ -1003,6 +1003,47 @@ export async function removeSkillEvaluation(evaluationId: string, profileId: str
 // OPERACIONES EN LOTE
 // ============================================================
 
+/** Asigna múltiples módulos/habilidades a múltiples operadores de una vez. */
+export async function bulkAssignSkills(input: {
+  profileIds: string[];
+  skillIds: string[];
+  result: "aprobado" | "en_progreso" | "no_aprobado";
+  notes?: string;
+}): Promise<ActionResult & { count?: number }> {
+  const staff = await requireCommandStaff();
+  if (input.profileIds.length === 0) return { error: "Seleccioná al menos un operador." };
+  if (input.skillIds.length === 0) return { error: "Seleccioná al menos un módulo o curso." };
+
+  const admin = createAdminClient();
+  const rows = input.profileIds.flatMap((pid) =>
+    input.skillIds.map((sid) => ({
+      profile_id: pid,
+      skill_id: sid,
+      result: input.result,
+      source: "instructor" as const,
+      notes: input.notes ?? null,
+      evaluated_at: new Date().toISOString(),
+    }))
+  );
+
+  const { error } = await admin.from("skill_evaluations").insert(rows);
+  if (error) return { error: error.message };
+
+  const count = input.profileIds.length * input.skillIds.length;
+  await logAudit(
+    staff.id,
+    "bulk_assign_skills",
+    null,
+    `${input.skillIds.length} skill(s) → ${input.profileIds.length} operador(es) (${input.result})`
+  );
+
+  for (const pid of input.profileIds) {
+    revalidatePath(`/admin/soldados/${pid}`);
+  }
+  revalidatePath("/perfil");
+  return { success: true, count };
+}
+
 /** Asigna un módulo/habilidad a múltiples operadores de una vez. */
 export async function bulkAssignSkill(input: {
   profileIds: string[];

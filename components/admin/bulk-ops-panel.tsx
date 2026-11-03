@@ -2,25 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { bulkAssignSkill, bulkAwardBonus, bulkApplySanction, bulkAwardReward } from "@/lib/actions/admin";
+import { bulkAssignSkills, bulkAwardBonus } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Search, X } from "lucide-react";
 import type { Profile, Rank } from "@/types/database";
 
 type ProfileRow = Profile & { rank: Rank | null };
 type Skill = { id: string; name: string; category: string | null };
-type Tab = "modulos" | "bonus" | "sanciones" | "recompensas";
-
-const SEVERITY_OPTS = [
-  { value: "leve", label: "Leve" },
-  { value: "moderada", label: "Moderada" },
-  { value: "grave", label: "Grave" },
-  { value: "extrema", label: "Extrema" },
-] as const;
+type Tab = "modulos" | "bonus";
 
 const BONUS_PRESETS = [
   { label: "Infiltración exitosa", amount: 300 },
@@ -44,8 +38,9 @@ export function BulkOpsPanel({
   const [search, setSearch] = useState("");
   const [pending, startTransition] = useTransition();
 
-  // Module/skill state
-  const [skillId, setSkillId] = useState("");
+  // Multi-skill state
+  const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(new Set());
+  const [skillSearch, setSkillSearch] = useState("");
   const [skillResult, setSkillResult] = useState<"aprobado" | "en_progreso" | "no_aprobado">("aprobado");
   const [skillNotes, setSkillNotes] = useState("");
 
@@ -54,21 +49,12 @@ export function BulkOpsPanel({
   const [bonusDetail, setBonusDetail] = useState("");
   const [bonusNotes, setBonusNotes] = useState("");
 
-  // Sanction state
-  const [sanctionSeverity, setSanctionSeverity] = useState<"leve" | "moderada" | "grave" | "extrema">("leve");
-  const [sanctionDesc, setSanctionDesc] = useState("");
-  const [sanctionAmount, setSanctionAmount] = useState("");
-
-  // Reward state
-  const [rewardTitle, setRewardTitle] = useState("");
-  const [rewardDesc, setRewardDesc] = useState("");
-  const [rewardAmount, setRewardAmount] = useState("");
-
   const approved = profiles.filter((p) => p.approved);
-  const filtered = approved.filter((p) =>
-    search.trim() === "" ||
-    p.callsign.toLowerCase().includes(search.toLowerCase()) ||
-    (p.squad ?? "").toLowerCase().includes(search.toLowerCase())
+  const filtered = approved.filter(
+    (p) =>
+      search.trim() === "" ||
+      p.callsign.toLowerCase().includes(search.toLowerCase()) ||
+      (p.squad ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   function toggleOne(id: string) {
@@ -87,14 +73,23 @@ export function BulkOpsPanel({
     }
   }
 
-  const ids = Array.from(selected);
-
-  function onSkillPreset(s: Skill) {
-    setSkillId(s.id);
+  function toggleSkill(id: string) {
+    setSelectedSkillIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   }
 
-  // Group skills by category
-  const skillsByCategory = skills.reduce<Record<string, Skill[]>>((acc, s) => {
+  const ids = Array.from(selected);
+  const skillIds = Array.from(selectedSkillIds);
+
+  // Group skills by category, filtered by skillSearch
+  const filteredSkills = skillSearch.trim()
+    ? skills.filter((s) => s.name.toLowerCase().includes(skillSearch.toLowerCase()))
+    : skills;
+
+  const skillsByCategory = filteredSkills.reduce<Record<string, Skill[]>>((acc, s) => {
     const cat = s.category ?? "General";
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(s);
@@ -109,26 +104,28 @@ export function BulkOpsPanel({
     startTransition(async () => {
       let result;
       if (tab === "modulos") {
-        result = await bulkAssignSkill({ profileIds: ids, skillId, result: skillResult, notes: skillNotes || undefined });
-      } else if (tab === "bonus") {
-        const amt = parseFloat(bonusAmount);
-        result = await bulkAwardBonus({ profileIds: ids, amount: amt, detail: bonusDetail, notes: bonusNotes || undefined });
-      } else if (tab === "sanciones") {
-        const amt = sanctionAmount ? parseFloat(sanctionAmount) : null;
-        result = await bulkApplySanction({ profileIds: ids, severity: sanctionSeverity, description: sanctionDesc, amountDeducted: amt });
+        if (skillIds.length === 0) { toast.error("Seleccioná al menos un módulo o curso."); return; }
+        result = await bulkAssignSkills({
+          profileIds: ids,
+          skillIds,
+          result: skillResult,
+          notes: skillNotes || undefined,
+        });
       } else {
-        const amt = rewardAmount ? parseFloat(rewardAmount) : null;
-        result = await bulkAwardReward({ profileIds: ids, title: rewardTitle, description: rewardDesc, amount: amt });
+        const amt = parseFloat(bonusAmount);
+        if (isNaN(amt) || amt <= 0) { toast.error("Ingresá un monto válido."); return; }
+        result = await bulkAwardBonus({ profileIds: ids, amount: amt, detail: bonusDetail, notes: bonusNotes || undefined });
       }
 
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success(`Operación aplicada a ${"count" in result ? result.count : ids.length} operadores.`);
+        const count = "count" in result ? result.count : ids.length;
+        toast.success(`Operación aplicada. ${count} evaluación${count !== 1 ? "es" : ""} registrada${count !== 1 ? "s" : ""}.`);
         setSelected(new Set());
-        // Reset forms
-        setSkillNotes(""); setBonusAmount(""); setBonusDetail(""); setBonusNotes("");
-        setSanctionDesc(""); setSanctionAmount(""); setRewardTitle(""); setRewardDesc(""); setRewardAmount("");
+        setSelectedSkillIds(new Set());
+        setSkillNotes("");
+        setBonusAmount(""); setBonusDetail(""); setBonusNotes("");
       }
     });
   }
@@ -136,15 +133,13 @@ export function BulkOpsPanel({
   const TABS: { key: Tab; label: string }[] = [
     { key: "modulos", label: "Módulos / Cursos" },
     { key: "bonus", label: "Bonos" },
-    { key: "sanciones", label: "Sanciones" },
-    { key: "recompensas", label: "Recompensas" },
   ];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       {/* Left — operator picker */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Input
             placeholder="Buscar por callsign o escuadra…"
             value={search}
@@ -188,9 +183,10 @@ export function BulkOpsPanel({
                 <tr
                   key={p.id}
                   onClick={() => toggleOne(p.id)}
-                  className={`cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/30 ${
-                    selected.has(p.id) ? "bg-primary/10" : ""
-                  }`}
+                  className={cn(
+                    "cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/30",
+                    selected.has(p.id) && "bg-primary/10"
+                  )}
                 >
                   <td className="px-3 py-2">
                     <input
@@ -214,16 +210,17 @@ export function BulkOpsPanel({
       {/* Right — operation panel */}
       <div className="flex flex-col gap-4">
         {/* Tab selector */}
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+              className={cn(
+                "rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
                 tab === t.key
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:text-foreground"
-              }`}
+              )}
             >
               {t.label}
             </button>
@@ -233,23 +230,85 @@ export function BulkOpsPanel({
         <div className="card-tactical p-4 flex flex-col gap-4">
           {tab === "modulos" && (
             <>
+              {/* Multi-skill selector */}
               <div className="flex flex-col gap-2">
-                <Label>Módulo / Curso</Label>
-                <Select value={skillId} onValueChange={setSkillId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccioná un módulo o curso…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(skillsByCategory).map(([cat, catSkills]) => (
-                      <div key={cat}>
-                        <p className="px-2 py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{cat}</p>
-                        {catSkills.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </div>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between">
+                  <Label>Módulos / Cursos</Label>
+                  {selectedSkillIds.size > 0 && (
+                    <span className="text-xs text-primary font-semibold">
+                      {selectedSkillIds.size} seleccionado{selectedSkillIds.size !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+
+                {/* Selected badges */}
+                {selectedSkillIds.size > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {Array.from(selectedSkillIds).map((sid) => {
+                      const s = skills.find((x) => x.id === sid);
+                      if (!s) return null;
+                      return (
+                        <span
+                          key={sid}
+                          className="flex items-center gap-1 rounded-full bg-primary/15 border border-primary/30 text-primary px-2 py-0.5 text-xs font-medium"
+                        >
+                          {s.name}
+                          <button onClick={() => toggleSkill(sid)} className="ml-0.5 hover:text-primary/70">
+                            <X size={10} />
+                          </button>
+                        </span>
+                      );
+                    })}
+                    <button
+                      onClick={() => setSelectedSkillIds(new Set())}
+                      className="text-xs text-muted-foreground hover:text-foreground underline"
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                )}
+
+                {/* Search */}
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={skillSearch}
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    placeholder="Buscar módulo o curso…"
+                    className="pl-8 text-sm h-8"
+                  />
+                </div>
+
+                {/* Scrollable checklist grouped by category */}
+                <div className="max-h-56 overflow-y-auto rounded-md border border-border divide-y divide-border/50">
+                  {Object.keys(skillsByCategory).length === 0 && (
+                    <p className="px-3 py-4 text-xs text-muted-foreground text-center">Sin resultados.</p>
+                  )}
+                  {Object.entries(skillsByCategory).map(([cat, catSkills]) => (
+                    <div key={cat}>
+                      <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted/30 sticky top-0">
+                        {cat}
+                      </p>
+                      {catSkills.map((s) => (
+                        <label
+                          key={s.id}
+                          className={cn(
+                            "flex items-center gap-2.5 px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-muted/30",
+                            selectedSkillIds.has(s.id) && "bg-primary/8 text-primary"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedSkillIds.has(s.id)}
+                            onChange={() => toggleSkill(s.id)}
+                            className="accent-primary shrink-0"
+                          />
+                          {s.name}
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -268,7 +327,11 @@ export function BulkOpsPanel({
 
               <div className="flex flex-col gap-2">
                 <Label>Notas (opcional)</Label>
-                <Input value={skillNotes} onChange={(e) => setSkillNotes(e.target.value)} placeholder="Ej: aprobado en entrenamiento del 15/11" />
+                <Input
+                  value={skillNotes}
+                  onChange={(e) => setSkillNotes(e.target.value)}
+                  placeholder="Ej: aprobado en entrenamiento del 15/11"
+                />
               </div>
             </>
           )}
@@ -304,47 +367,6 @@ export function BulkOpsPanel({
             </>
           )}
 
-          {tab === "sanciones" && (
-            <>
-              <div className="flex flex-col gap-2">
-                <Label>Severidad</Label>
-                <Select value={sanctionSeverity} onValueChange={(v) => setSanctionSeverity(v as typeof sanctionSeverity)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {SEVERITY_OPTS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Descripción</Label>
-                <Textarea value={sanctionDesc} onChange={(e) => setSanctionDesc(e.target.value)} placeholder="Razón de la sanción…" rows={3} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Descuento en créditos (opcional)</Label>
-                <Input type="number" value={sanctionAmount} onChange={(e) => setSanctionAmount(e.target.value)} placeholder="0" />
-              </div>
-            </>
-          )}
-
-          {tab === "recompensas" && (
-            <>
-              <div className="flex flex-col gap-2">
-                <Label>Título de la recompensa</Label>
-                <Input value={rewardTitle} onChange={(e) => setRewardTitle(e.target.value)} placeholder="Ej: Mejor operador del mes" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Descripción</Label>
-                <Textarea value={rewardDesc} onChange={(e) => setRewardDesc(e.target.value)} placeholder="Descripción opcional…" rows={3} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Monto en créditos (opcional)</Label>
-                <Input type="number" value={rewardAmount} onChange={(e) => setRewardAmount(e.target.value)} placeholder="0" />
-              </div>
-            </>
-          )}
-
           <Button
             onClick={handleSubmit}
             disabled={pending || ids.length === 0}
@@ -354,6 +376,8 @@ export function BulkOpsPanel({
               ? "Aplicando…"
               : ids.length === 0
               ? "Seleccioná operadores"
+              : tab === "modulos" && skillIds.length > 1
+              ? `Aplicar ${skillIds.length} cursos a ${ids.length} operador${ids.length !== 1 ? "es" : ""}`
               : `Aplicar a ${ids.length} operador${ids.length !== 1 ? "es" : ""}`}
           </Button>
         </div>
