@@ -254,9 +254,12 @@ export async function createRank(data: {
 export async function updateRank(
   rankId: string,
   patch: {
+    name?: string;
+    abbreviation?: string;
     weekly_wage?: number;
     description?: string | null;
     promotion_requirement?: string | null;
+    requirements_json?: Record<string, unknown> | null;
   }
 ): Promise<ActionResult> {
   await requireCommandStaff();
@@ -265,6 +268,7 @@ export async function updateRank(
   if (error) return { error: error.message };
   revalidatePath("/admin/rangos");
   revalidatePath("/dashboard");
+  revalidatePath("/perfil");
   return { success: true };
 }
 

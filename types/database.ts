@@ -18,6 +18,8 @@ export type RankRequirements = {
   requires_vote?: boolean;
   previous_rank_abbr?: string;
   note?: string;
+  attendance_days?: number;
+  mission_days?: number;
 };
 
 export type Rank = {

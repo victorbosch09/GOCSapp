@@ -76,6 +76,19 @@ export async function getOwnAttendanceStreak() {
   return streak;
 }
 
+/** Total de días oficiales (entrenamiento + operación) a los que el operador asistió. */
+export async function getOwnOfficialAttendanceCount(): Promise<number> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+  const { count } = await supabase
+    .from("event_attendance")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", user.id)
+    .eq("attended", true);
+  return count ?? 0;
+}
+
 export type AttendanceHistoryEntry = {
   eventId: string;
   title: string;

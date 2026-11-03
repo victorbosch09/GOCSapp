@@ -10,6 +10,7 @@ type Props = {
   approvedModuleNumbers: number[];
   approvedSpecialtyCourses: number;
   approvedLeadershipCourses: string[];
+  officialAttendanceCount: number;
 };
 
 function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
@@ -37,6 +38,7 @@ export function RankProgression({
   approvedModuleNumbers,
   approvedSpecialtyCourses,
   approvedLeadershipCourses,
+  officialAttendanceCount,
 }: Props) {
   const currentIdx = allRanks.findIndex((r) => r.id === currentRankId);
   const nextRank = currentIdx >= 0 && currentIdx < allRanks.length - 1
@@ -136,6 +138,14 @@ export function RankProgression({
             Progreso hacia [{nextRank.abbreviation}] {nextRank.name}
           </p>
 
+          {reqs.attendance_days && (
+            <ProgressBar
+              label="Días oficiales de asistencia"
+              value={officialAttendanceCount}
+              max={reqs.attendance_days}
+            />
+          )}
+
           {reqs.contracts && (
             <ProgressBar
               label="Contratos completados"
@@ -172,6 +182,15 @@ export function RankProgression({
                 )}
               >
                 {approvedLeadershipCourses.includes(reqs.leadership_course) ? "✓ Completado" : "Pendiente"}
+              </span>
+            </div>
+          )}
+
+          {reqs.mission_days && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Días de misión de prueba con especialidad ({reqs.mission_days} requeridos)</span>
+              <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground">
+                Coordinado con mando
               </span>
             </div>
           )}

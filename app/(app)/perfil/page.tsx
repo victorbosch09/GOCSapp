@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getFullProfileData } from "@/lib/data/profile-service";
 import { computeAchievements } from "@/lib/achievements";
-import { getOwnAttendanceStreak } from "@/lib/data/attendance";
+import { getOwnAttendanceStreak, getOwnOfficialAttendanceCount } from "@/lib/data/attendance";
 import { getOwnQuizAttempts } from "@/lib/data/quiz";
 import { getOwnInventory } from "@/lib/data/dashboard";
 import { RankProgression } from "@/components/profile/rank-progression";
@@ -28,10 +28,11 @@ export default async function PerfilPage() {
 
   const { profile, evaluations, rewards, sanctions, contracts, allRanks, allSkills } = data;
 
-  const [quizAttempts, attendanceStreak, inventory] = await Promise.all([
+  const [quizAttempts, attendanceStreak, inventory, officialAttendanceCount] = await Promise.all([
     getOwnQuizAttempts(),
     getOwnAttendanceStreak(),
     getOwnInventory(),
+    getOwnOfficialAttendanceCount(),
   ]);
 
   const achievements = computeAchievements({
@@ -220,6 +221,7 @@ export default async function PerfilPage() {
           approvedModuleNumbers={approvedModuleNumbers}
           approvedSpecialtyCourses={approvedSpecialtyCourses}
           approvedLeadershipCourses={approvedLeadershipCourses}
+          officialAttendanceCount={officialAttendanceCount}
         />
       </section>
 
