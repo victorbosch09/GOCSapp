@@ -272,6 +272,23 @@ export async function updateRank(
   return { success: true };
 }
 
+export async function reorderRanks(
+  ordered: { id: string; sort_order: number }[]
+): Promise<ActionResult> {
+  await requireCommandStaff();
+  const admin = createAdminClient();
+  const updates = ordered.map(({ id, sort_order }) =>
+    admin.from("ranks").update({ sort_order }).eq("id", id)
+  );
+  const results = await Promise.all(updates);
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { error: failed.error.message };
+  revalidatePath("/admin/rangos");
+  revalidatePath("/dashboard");
+  revalidatePath("/perfil");
+  return { success: true };
+}
+
 /** Borra completamente la cuenta de un operador (para bajas del clan). */
 export async function deleteProfile(profileId: string): Promise<ActionResult> {
   const staff = await requireCommandStaff();

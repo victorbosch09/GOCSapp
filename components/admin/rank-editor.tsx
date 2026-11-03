@@ -1,45 +1,114 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { toast } from "sonner";
-import { updateRank, createRank } from "@/lib/actions/admin";
+import { updateRank, createRank, reorderRanks } from "@/lib/actions/admin";
 import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Rank } from "@/types/database";
 
 export function RankEditor({ ranks }: { ranks: Rank[] }) {
   const [showNew, setShowNew] = useState(false);
+  const [orderedRanks, setOrderedRanks] = useState<Rank[]>(ranks);
+  const [savingOrder, startOrderTransition] = useTransition();
+
+  const dragIdx = useRef<number | null>(null);
+  const dragOverIdx = useRef<number | null>(null);
+
+  function onDragStart(idx: number) {
+    dragIdx.current = idx;
+  }
+
+  function onDragEnter(idx: number) {
+    if (dragIdx.current === null || dragIdx.current === idx) return;
+    dragOverIdx.current = idx;
+    const next = [...orderedRanks];
+    const [moved] = next.splice(dragIdx.current, 1);
+    next.splice(idx, 0, moved);
+    dragIdx.current = idx;
+    setOrderedRanks(next);
+  }
+
+  function onDragEnd() {
+    dragIdx.current = null;
+    dragOverIdx.current = null;
+  }
+
+  function saveOrder() {
+    const payload = orderedRanks.map((r, i) => ({ id: r.id, sort_order: (i + 1) * 10 }));
+    startOrderTransition(async () => {
+      const result = await reorderRanks(payload);
+      if (result?.error) toast.error(result.error);
+      else toast.success("Orden de rangos guardado.");
+    });
+  }
+
+  const hasOrderChanged = orderedRanks.some(
+    (r, i) => r.id !== ranks[i]?.id
+  );
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowNew((v) => !v)}
-          className="gap-2"
-        >
-          <Plus size={14} />
-          Nuevo rango
-          {showNew ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </Button>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-xs text-muted-foreground">
+          Arrastra los rangos para reordenarlos. Guarda el orden cuando termines.
+        </p>
+        <div className="flex gap-2">
+          {hasOrderChanged && (
+            <Button
+              size="sm"
+              variant="default"
+              disabled={savingOrder}
+              onClick={saveOrder}
+              className="gap-1.5"
+            >
+              {savingOrder ? "Guardando..." : "Guardar orden"}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowNew((v) => !v)}
+            className="gap-2"
+          >
+            <Plus size={14} />
+            Nuevo rango
+            {showNew ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </Button>
+        </div>
       </div>
 
       {showNew && (
         <NewRankForm
-          nextSortOrder={Math.max(0, ...ranks.map((r) => r.sort_order)) + 10}
+          nextSortOrder={Math.max(0, ...orderedRanks.map((r) => r.sort_order)) + 10}
           onCreated={() => setShowNew(false)}
         />
       )}
 
-      {ranks.map((rank) => (
-        <RankCard key={rank.id} rank={rank} />
-      ))}
+      <div className="flex flex-col gap-2">
+        {orderedRanks.map((rank, idx) => (
+          <div
+            key={rank.id}
+            draggable
+            onDragStart={() => onDragStart(idx)}
+            onDragEnter={() => onDragEnter(idx)}
+            onDragEnd={onDragEnd}
+            onDragOver={(e) => e.preventDefault()}
+            className={cn(
+              "group transition-opacity",
+              dragIdx.current === idx && "opacity-40"
+            )}
+          >
+            <RankCard rank={rank} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -219,20 +288,27 @@ function RankCard({ rank }: { rank: Rank }) {
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="font-heading text-base">
-            {rank.name} <span className="text-muted-foreground text-sm font-normal">({rank.abbreviation})</span>
-          </CardTitle>
+          <div className="flex items-center gap-2 min-w-0">
+            <GripVertical
+              size={16}
+              className="shrink-0 text-muted-foreground/40 cursor-grab active:cursor-grabbing"
+            />
+            <CardTitle className="font-heading text-base truncate">
+              {rank.name}{" "}
+              <span className="text-muted-foreground text-sm font-normal">({rank.abbreviation})</span>
+            </CardTitle>
+          </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setExpanded((v) => !v)}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs shrink-0"
           >
             {expanded ? <><ChevronUp size={13} /> Cerrar</> : <><ChevronDown size={13} /> Editar</>}
           </Button>
         </div>
         {!expanded && (
-          <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+          <div className="flex gap-4 text-xs text-muted-foreground mt-1 pl-6">
             <span>{formatCredits(rank.weekly_wage)}/sem</span>
             {rank.promotion_requirement && <span className="truncate">{rank.promotion_requirement}</span>}
           </div>
