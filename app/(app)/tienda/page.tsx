@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
 import { getCurrentProfile } from "@/lib/data/profile";
 import { getFullCatalog } from "@/lib/data/catalog";
+import { getOwnInventory } from "@/lib/data/dashboard";
 import { formatCredits } from "@/lib/format";
 import { CatalogTabs } from "@/components/shop/catalog-tabs";
 
 export const metadata: Metadata = { title: "Tienda — G.O.C.S." };
 
 export default async function TiendaPage() {
-  const [profile, catalog] = await Promise.all([getCurrentProfile(), getFullCatalog()]);
+  const [profile, catalog, inventory] = await Promise.all([
+    getCurrentProfile(),
+    getFullCatalog(),
+    getOwnInventory(),
+  ]);
+
+  const hasWeaponLicense = inventory.some(
+    (i) => i.item_table === "weapons" && /licencia de modificaci/i.test(i.item_name ?? "")
+  );
+  const hasAccessoryLicense = inventory.some(
+    (i) => i.item_table === "accessories" && /licencia de accesorio/i.test(i.item_name ?? "")
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -32,6 +44,8 @@ export default async function TiendaPage() {
         balance={profile.cached_balance}
         canBuy={profile.approved}
         myRankSortOrder={profile.rank?.sort_order ?? -1}
+        hasWeaponLicense={hasWeaponLicense}
+        hasAccessoryLicense={hasAccessoryLicense}
       />
     </div>
   );

@@ -44,11 +44,15 @@ export function CatalogTabs({
   balance,
   canBuy,
   myRankSortOrder,
+  hasWeaponLicense,
+  hasAccessoryLicense,
 }: {
   initial: Record<Table, (CatalogItem | Vehicle)[]>;
   balance: number;
   canBuy: boolean;
   myRankSortOrder: number;
+  hasWeaponLicense: boolean;
+  hasAccessoryLicense: boolean;
 }) {
   const [data, setData] = useState(initial);
   const [search, setSearch] = useState("");
@@ -153,6 +157,8 @@ export function CatalogTabs({
                           balance={balance}
                           canBuy={canBuy}
                           myRankSortOrder={myRankSortOrder}
+                          hasWeaponLicense={hasWeaponLicense}
+                          hasAccessoryLicense={hasAccessoryLicense}
                           comparing={compareItems.some((c) => c.item.id === item.id)}
                           onToggleCompare={() => toggleCompare(item, table)}
                         />
@@ -267,6 +273,8 @@ function ItemCard({
   balance,
   canBuy,
   myRankSortOrder,
+  hasWeaponLicense,
+  hasAccessoryLicense,
   comparing,
   onToggleCompare,
 }: {
@@ -275,6 +283,8 @@ function ItemCard({
   balance: number;
   canBuy: boolean;
   myRankSortOrder: number;
+  hasWeaponLicense: boolean;
+  hasAccessoryLicense: boolean;
   comparing: boolean;
   onToggleCompare: () => void;
 }) {
@@ -290,7 +300,14 @@ function ItemCard({
   const lowStock = inStock && item.stock <= LOW_STOCK_THRESHOLD;
   const now = useNow();
   const isNew = now - new Date(item.created_at).getTime() < NEW_ITEM_WINDOW_MS;
-  const disabled = pending || !canBuy || !inStock || !affordable || !rankOk;
+
+  // License gate: licenses themselves are always purchasable; other weapons/accessories require the license
+  const isLicense = /licencia/i.test(item.name);
+  const licenseOk =
+    isLicense ||
+    (table === "weapons" ? hasWeaponLicense : table === "accessories" ? hasAccessoryLicense : true);
+
+  const disabled = pending || !canBuy || !inStock || !affordable || !rankOk || !licenseOk;
 
   function handleBuy() {
     startTransition(async () => {
@@ -356,10 +373,16 @@ function ItemCard({
         {!rankOk && (
           <p className="text-xs text-destructive">🔒 Requiere un rango más alto para comprar.</p>
         )}
+        {!licenseOk && (
+          <p className="text-xs text-amber-400">
+            🔒 Requiere{" "}
+            {table === "weapons" ? "Licencia de Modificación de Armamento" : "Licencia de Accesorios"}.
+          </p>
+        )}
         <Button
           size="sm"
           className={
-            inStock && affordable && canBuy && rankOk
+            inStock && affordable && canBuy && rankOk && licenseOk
               ? "mt-2 bg-emerald-600 text-white hover:bg-emerald-500"
               : "mt-2"
           }
@@ -372,7 +395,11 @@ function ItemCard({
                 ? "Saldo insuficiente"
                 : !rankOk
                   ? "Rango insuficiente"
-                  : undefined
+                  : !licenseOk
+                    ? table === "weapons"
+                      ? "Necesitás la Licencia de Modificación de Armamento"
+                      : "Necesitás la Licencia de Accesorios"
+                    : undefined
           }
         >
           {pending
@@ -381,7 +408,9 @@ function ItemCard({
               ? "Sin stock"
               : !rankOk
                 ? "Rango insuficiente"
-                : "Comprar"}
+                : !licenseOk
+                  ? "Licencia requerida"
+                  : "Comprar"}
         </Button>
       </CardContent>
     </Card>
