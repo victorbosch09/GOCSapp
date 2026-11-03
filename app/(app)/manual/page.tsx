@@ -3,16 +3,6 @@ import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = { title: "Manual del Operador V2 — G.O.C.S." };
 
-const RANKS = [
-  { abbr: "REC", name: "Recluta", salary: 0, desc: "Ingresa al servidor, sin acceso a operaciones." },
-  { abbr: "OPR", name: "Operador", salary: 500, desc: "Acceso a operaciones básicas. Sueldo base." },
-  { abbr: "EXP", name: "Especialista", salary: 750, desc: "Módulos completados. Operaciones especiales." },
-  { abbr: "SGT", name: "Sargento", salary: 1000, desc: "Liderazgo de escuadra. Gestión de efectivos." },
-  { abbr: "LT", name: "Teniente", salary: 1400, desc: "Mando de pelotón. Decisiones tácticas." },
-  { abbr: "CPT", name: "Capitán", salary: 1800, desc: "Mando de compañía. Planificación operacional." },
-  { abbr: "MAY", name: "Mayor", salary: 2200, desc: "Mando superior. Gestión estratégica." },
-  { abbr: "CMD", name: "Comandante", salary: 2800, desc: "Alto mando. Dirección de G.O.C.S." },
-];
 
 const MODULES = [
   {
@@ -122,40 +112,6 @@ export default function ManualPage() {
           </div>
         </div>
       </div>
-
-      {/* Ranks */}
-      <section className="flex flex-col gap-4">
-        <p className="section-header">
-          <span className="h-1 w-3 rounded-full bg-primary shrink-0" />
-          Estructura de Rangos
-        </p>
-        <div className="rounded-lg border border-border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-2.5 text-left font-semibold uppercase tracking-wide text-xs text-muted-foreground">Abrev.</th>
-                <th className="px-4 py-2.5 text-left font-semibold uppercase tracking-wide text-xs text-muted-foreground">Rango</th>
-                <th className="px-4 py-2.5 text-left font-semibold uppercase tracking-wide text-xs text-muted-foreground hidden sm:table-cell">Sueldo / semana</th>
-                <th className="px-4 py-2.5 text-left font-semibold uppercase tracking-wide text-xs text-muted-foreground hidden md:table-cell">Descripción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {RANKS.map((r, i) => (
-                <tr key={r.abbr} className={`border-b border-border/50 ${i === RANKS.length - 1 ? "border-0" : ""}`}>
-                  <td className="px-4 py-3">
-                    <span className="font-heading text-xs font-bold text-primary">{r.abbr}</span>
-                  </td>
-                  <td className="px-4 py-3 font-medium">{r.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
-                    {r.salary > 0 ? `${r.salary.toLocaleString()} cr` : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs hidden md:table-cell">{r.desc}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       {/* Modules */}
       <section className="flex flex-col gap-4">
