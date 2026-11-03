@@ -45,11 +45,12 @@ export async function getFullProfileData(): Promise<FullProfileData | null> {
       .select("*, sanction_type:sanction_types(*)")
       .eq("profile_id", user.id)
       .order("applied_at", { ascending: false }),
-    supabase
+    admin
       .from("contracts")
       .select("id, contract_date, total_amount, risk_level")
       .eq("profile_id", user.id)
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(500),
     admin.from("ranks").select("*").order("sort_order", { ascending: true }),
     admin.from("skills").select("*").order("sort_order", { ascending: true }),
   ]);

@@ -510,7 +510,13 @@ export async function logContract(input: {
   const firstError = results.find((r) => r.error);
   if (firstError?.error) return { error: firstError.error.message };
   revalidatePath("/admin/soldados");
+  revalidatePath("/admin/contratos");
   revalidatePath("/dashboard");
+  revalidatePath("/perfil");
+  // Revalidate each operator's admin portal
+  for (const pid of input.profileIds) {
+    revalidatePath(`/admin/soldados/${pid}`);
+  }
   return { success: true };
 }
 
