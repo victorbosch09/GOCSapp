@@ -81,12 +81,17 @@ export async function getOwnOfficialAttendanceCount(): Promise<number> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return 0;
-  const { count } = await supabase
+
+  // Join to events so we only count official event types (entrenamiento + operacion),
+  // matching the same scope as the attendance streak.
+  const { data } = await supabase
     .from("event_attendance")
-    .select("id", { count: "exact", head: true })
+    .select("id, event:events!inner(event_type)")
     .eq("profile_id", user.id)
-    .eq("attended", true);
-  return count ?? 0;
+    .eq("attended", true)
+    .in("event.event_type", ["entrenamiento", "operacion"]);
+
+  return data?.length ?? 0;
 }
 
 export type AttendanceHistoryEntry = {
