@@ -39,18 +39,22 @@ export async function purchaseItem(itemTable: CatalogTable, itemId: string) {
     const isLicense = /licencia/i.test(itemData?.name ?? "");
 
     if (!isLicense) {
-      // Search across ALL inventory tables — the license item may live in a different catalog table
-      const licenseKeyword =
-        itemTable === "accessories" ? "%licencia%accesorio%" : "%licencia%equipamiento%";
-
-      const { data: licenseInInventory } = await admin
+      // Fetch all license items from the soldier's inventory (any catalog table)
+      const { data: licenses } = await admin
         .from("inventory")
-        .select("id")
+        .select("item_name")
         .eq("profile_id", user.id)
-        .ilike("item_name", licenseKeyword)
-        .limit(1);
+        .ilike("item_name", "%licencia%");
 
-      if (!licenseInInventory || licenseInInventory.length === 0) {
+      const licenseNames = (licenses ?? []).map((l) => (l.item_name ?? "").toLowerCase());
+
+      // Equipment license must mention "equipamiento"; accessories license is any other license
+      const hasRequiredLicense =
+        itemTable === "equipment"
+          ? licenseNames.some((n) => n.includes("equipamiento"))
+          : licenseNames.some((n) => !n.includes("equipamiento"));
+
+      if (!hasRequiredLicense) {
         const msg =
           itemTable === "accessories"
             ? "Necesitás comprar la Licencia de Accesorios antes de adquirir accesorios."

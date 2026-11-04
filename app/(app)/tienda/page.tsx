@@ -16,9 +16,11 @@ export default async function TiendaPage() {
     getInsuranceCatalog(profile.id),
   ]);
 
-  // License flags: check across ALL inventory tables (license item may be in a different catalog)
-  const hasAccessoryLicense = inventory.some((i) => /licencia.*accesorio/i.test(i.item_name ?? ""));
-  const hasEquipmentLicense = inventory.some((i) => /licencia.*equipamiento/i.test(i.item_name ?? ""));
+  // License flags: fetch all license items and distinguish by name.
+  // Equipment license must mention "equipamiento"; accessories license is any other license.
+  const licenseItems = inventory.filter((i) => /licencia/i.test(i.item_name ?? ""));
+  const hasAccessoryLicense = licenseItems.some((i) => !/equipamiento/i.test(i.item_name ?? ""));
+  const hasEquipmentLicense = licenseItems.some((i) => /equipamiento/i.test(i.item_name ?? ""));
 
   return (
     <div className="flex flex-col gap-6">
