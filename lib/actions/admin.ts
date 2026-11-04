@@ -318,6 +318,7 @@ export async function updateCatalogItem(
     notes?: string | null;
     min_rank_sort_order?: number | null;
     image_url?: string | null;
+    requires_license_key?: string | null;
   }
 ): Promise<ActionResult> {
   await requireCommandStaff();
@@ -326,7 +327,7 @@ export async function updateCatalogItem(
     return { error: "El stock tiene que ser un número entero mayor o igual a 0." };
   }
   const admin = createAdminClient();
-  const { error } = await admin.from(table).update(patch).eq("id", id);
+  const { error } = await admin.from(table).update(patch as never).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin/catalogo");
   revalidatePath("/tienda");

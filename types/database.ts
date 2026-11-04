@@ -69,6 +69,8 @@ export type Profile = {
   created_at: string;
 };
 
+export type LicenseKey = "ropa" | "accesorios" | "accesorios_ropa";
+
 export type CatalogItem = {
   id: string;
   category: string;
@@ -81,6 +83,7 @@ export type CatalogItem = {
   image_url: string | null;
   notes: string | null;
   min_rank_sort_order: number | null;
+  requires_license_key: LicenseKey | null;
   created_at: string;
 };
 
@@ -93,6 +96,7 @@ export type Vehicle = {
   image_url: string | null;
   notes: string | null;
   min_rank_sort_order: number | null;
+  requires_license_key: LicenseKey | null;
   created_at: string;
 };
 

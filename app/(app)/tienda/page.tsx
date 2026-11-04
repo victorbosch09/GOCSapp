@@ -16,11 +16,20 @@ export default async function TiendaPage() {
     getInsuranceCatalog(profile.id),
   ]);
 
-  // License flags: fetch all license items and distinguish by name.
-  // Equipment license must mention "equipamiento"; accessories license is any other license.
-  const licenseItems = inventory.filter((i) => /licencia/i.test(i.item_name ?? ""));
-  const hasAccessoryLicense = licenseItems.some((i) => !/equipamiento/i.test(i.item_name ?? ""));
-  const hasEquipmentLicense = licenseItems.some((i) => /equipamiento/i.test(i.item_name ?? ""));
+  // Build a set of license keys the soldier owns.
+  // License items are in category 'Licencias'; their name encodes the key they grant.
+  const LICENSE_KEY_WORDS: Array<{ key: string; word: string }> = [
+    { key: "ropa", word: "ropa" },
+    { key: "accesorios_ropa", word: "accesorios de ropa" },
+    { key: "accesorios", word: "accesorios" },
+  ];
+  const ownedLicenseKeys = new Set<string>();
+  for (const item of inventory.filter((i) => i.item_category === "Licencias")) {
+    const nameLower = (item.item_name ?? "").toLowerCase();
+    for (const { key, word } of LICENSE_KEY_WORDS) {
+      if (nameLower.includes(word)) { ownedLicenseKeys.add(key); break; }
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,8 +54,7 @@ export default async function TiendaPage() {
         balance={profile.cached_balance}
         canBuy={profile.approved}
         myRankSortOrder={profile.rank?.sort_order ?? -1}
-        hasAccessoryLicense={hasAccessoryLicense}
-        hasEquipmentLicense={hasEquipmentLicense}
+        ownedLicenseKeys={ownedLicenseKeys}
         insurance={insurance}
       />
     </div>

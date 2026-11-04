@@ -28,38 +28,36 @@ export async function purchaseItem(itemTable: CatalogTable, itemId: string) {
 
   const admin = createAdminClient();
 
-  // License prerequisite gates (weapons are always free; accessories and equipment require their license)
-  if (itemTable === "accessories" || itemTable === "equipment") {
+  // License prerequisite gate: check the item's requires_license_key column.
+  // License items are sold in category 'Licencias' and their name encodes the key they grant.
+  {
     const { data: itemData } = await admin
-      .from(itemTable as "accessories" | "equipment")
-      .select("name")
+      .from(itemTable)
+      .select("name, requires_license_key")
       .eq("id", itemId)
       .single();
 
-    const isLicense = /licencia/i.test(itemData?.name ?? "");
+    const requiredKey: string | null = (itemData as { requires_license_key?: string | null })?.requires_license_key ?? null;
 
-    if (!isLicense) {
-      // Fetch all license items from the soldier's inventory (any catalog table)
+    if (requiredKey) {
+      // Find if soldier owns a license item whose name contains the required key
       const { data: licenses } = await admin
         .from("inventory")
         .select("item_name")
         .eq("profile_id", user.id)
-        .ilike("item_name", "%licencia%");
+        .eq("item_category", "Licencias");
 
-      const licenseNames = (licenses ?? []).map((l) => (l.item_name ?? "").toLowerCase());
+      const owned = (licenses ?? []).some((l) =>
+        (l.item_name ?? "").toLowerCase().includes(requiredKey.replace(/_/g, " "))
+      );
 
-      // Equipment license must mention "equipamiento"; accessories license is any other license
-      const hasRequiredLicense =
-        itemTable === "equipment"
-          ? licenseNames.some((n) => n.includes("equipamiento"))
-          : licenseNames.some((n) => !n.includes("equipamiento"));
-
-      if (!hasRequiredLicense) {
-        const msg =
-          itemTable === "accessories"
-            ? "Necesitás comprar la Licencia de Accesorios antes de adquirir accesorios."
-            : "Necesitás comprar la Licencia de Modificación de Equipamiento antes de adquirir equipamiento.";
-        return { error: msg };
+      if (!owned) {
+        const labels: Record<string, string> = {
+          ropa: "Licencia de Ropa",
+          accesorios: "Licencia de Accesorios",
+          accesorios_ropa: "Licencia de Accesorios de Ropa",
+        };
+        return { error: `Necesitás la ${labels[requiredKey] ?? "licencia requerida"} para comprar este ítem.` };
       }
     }
   }

@@ -33,7 +33,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Trash2 } from "lucide-react";
-import type { CatalogItem, Rank, Vehicle, StoreSection, StoreSectionItem } from "@/types/database";
+import type { CatalogItem, LicenseKey, Rank, Vehicle, StoreSection, StoreSectionItem } from "@/types/database";
+
+const LICENSE_OPTIONS: { value: LicenseKey | "none"; label: string }[] = [
+  { value: "none", label: "Sin licencia" },
+  { value: "ropa", label: "Licencia de Ropa" },
+  { value: "accesorios", label: "Licencia de Accesorios" },
+  { value: "accesorios_ropa", label: "Licencia de Accesorios de Ropa" },
+];
 
 type Table_ = "weapons" | "equipment" | "accessories" | "vehicles";
 
@@ -124,6 +131,7 @@ export function CatalogEditor({
                     <TableHead className="w-28">Precio (cr)</TableHead>
                     <TableHead className="w-24">Stock</TableHead>
                     <TableHead className="w-44">Rango mínimo</TableHead>
+                    <TableHead className="w-44">Licencia requerida</TableHead>
                     <TableHead className="w-40">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -304,7 +312,7 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
   const fileInputRef = useRef<HTMLInputElement>(null);
   const confirm = useConfirm();
 
-  function save(patch: { price?: number; stock?: number; min_rank_sort_order?: number | null }) {
+  function save(patch: { price?: number; stock?: number; min_rank_sort_order?: number | null; requires_license_key?: string | null }) {
     startTransition(async () => {
       const result = await updateCatalogItem(table, item.id, patch);
       if (result?.error) toast.error(result.error);
@@ -413,6 +421,23 @@ function ItemRow({ item, table, ranks }: { item: CatalogItem | Vehicle; table: T
               <SelectItem key={r.id} value={String(r.sort_order)}>
                 {r.name}+
               </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
+        <Select
+          value={(item as CatalogItem).requires_license_key ?? "none"}
+          onValueChange={(v) =>
+            save({ requires_license_key: v === "none" ? null : v })
+          }
+        >
+          <SelectTrigger size="sm" className="w-full">
+            <SelectValue placeholder="Sin licencia" />
+          </SelectTrigger>
+          <SelectContent>
+            {LICENSE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

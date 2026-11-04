@@ -46,16 +46,14 @@ export function CatalogTabs({
   balance,
   canBuy,
   myRankSortOrder,
-  hasAccessoryLicense,
-  hasEquipmentLicense,
+  ownedLicenseKeys,
   insurance,
 }: {
   initial: Record<Table, (CatalogItem | Vehicle)[]>;
   balance: number;
   canBuy: boolean;
   myRankSortOrder: number;
-  hasAccessoryLicense: boolean;
-  hasEquipmentLicense: boolean;
+  ownedLicenseKeys: Set<string>;
   insurance: InsuranceItem[];
 }) {
   const [data, setData] = useState(initial);
@@ -163,8 +161,7 @@ export function CatalogTabs({
                           balance={balance}
                           canBuy={canBuy}
                           myRankSortOrder={myRankSortOrder}
-                          hasAccessoryLicense={hasAccessoryLicense}
-                          hasEquipmentLicense={hasEquipmentLicense}
+                          ownedLicenseKeys={ownedLicenseKeys}
                           comparing={compareItems.some((c) => c.item.id === item.id)}
                           onToggleCompare={() => toggleCompare(item, table)}
                         />
@@ -298,14 +295,19 @@ export function CatalogTabs({
   );
 }
 
+const LICENSE_LABELS: Record<string, string> = {
+  ropa: "Licencia de Ropa",
+  accesorios: "Licencia de Accesorios",
+  accesorios_ropa: "Licencia de Accesorios de Ropa",
+};
+
 function ItemCard({
   item,
   table,
   balance,
   canBuy,
   myRankSortOrder,
-  hasAccessoryLicense,
-  hasEquipmentLicense,
+  ownedLicenseKeys,
   comparing,
   onToggleCompare,
 }: {
@@ -314,8 +316,7 @@ function ItemCard({
   balance: number;
   canBuy: boolean;
   myRankSortOrder: number;
-  hasAccessoryLicense: boolean;
-  hasEquipmentLicense: boolean;
+  ownedLicenseKeys: Set<string>;
   comparing: boolean;
   onToggleCompare: () => void;
 }) {
@@ -332,11 +333,9 @@ function ItemCard({
   const now = useNow();
   const isNew = now - new Date(item.created_at).getTime() < NEW_ITEM_WINDOW_MS;
 
-  // License gate: accessories and equipment require their respective license; licenses always pass
-  const isLicense = /licencia/i.test(item.name);
-  const licenseOk =
-    isLicense ||
-    (table === "accessories" ? hasAccessoryLicense : table === "equipment" ? hasEquipmentLicense : true);
+  // License gate: based on requires_license_key column; null means freely purchasable
+  const requiredKey = ("requires_license_key" in item ? item.requires_license_key : null) as string | null;
+  const licenseOk = !requiredKey || ownedLicenseKeys.has(requiredKey);
 
   const disabled = pending || !canBuy || !inStock || !affordable || !rankOk || !licenseOk;
 
@@ -404,10 +403,9 @@ function ItemCard({
         {!rankOk && (
           <p className="text-xs text-destructive">🔒 Requiere un rango más alto para comprar.</p>
         )}
-        {!licenseOk && (
+        {!licenseOk && requiredKey && (
           <p className="text-xs text-amber-400">
-            🔒 Requiere{" "}
-            {table === "equipment" ? "Licencia de Modificación de Equipamiento" : "Licencia de Accesorios"}.
+            🔒 Requiere {LICENSE_LABELS[requiredKey] ?? "licencia"}.
           </p>
         )}
         <Button
@@ -426,10 +424,8 @@ function ItemCard({
                 ? "Saldo insuficiente"
                 : !rankOk
                   ? "Rango insuficiente"
-                  : !licenseOk
-                    ? table === "equipment"
-                      ? "Necesitás la Licencia de Modificación de Equipamiento"
-                      : "Necesitás la Licencia de Accesorios"
+                  : !licenseOk && requiredKey
+                    ? `Necesitás la ${LICENSE_LABELS[requiredKey] ?? "licencia requerida"}`
                     : undefined
           }
         >
