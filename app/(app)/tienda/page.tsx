@@ -14,9 +14,6 @@ export default async function TiendaPage() {
     getOwnInventory(),
   ]);
 
-  const hasWeaponLicense = inventory.some(
-    (i) => i.item_table === "weapons" && /licencia de modificaci/i.test(i.item_name ?? "")
-  );
   const hasAccessoryLicense = inventory.some(
     (i) => i.item_table === "accessories" && /licencia de accesorio/i.test(i.item_name ?? "")
   );
@@ -44,7 +41,6 @@ export default async function TiendaPage() {
         balance={profile.cached_balance}
         canBuy={profile.approved}
         myRankSortOrder={profile.rank?.sort_order ?? -1}
-        hasWeaponLicense={hasWeaponLicense}
         hasAccessoryLicense={hasAccessoryLicense}
       />
     </div>

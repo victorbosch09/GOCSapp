@@ -44,14 +44,12 @@ export function CatalogTabs({
   balance,
   canBuy,
   myRankSortOrder,
-  hasWeaponLicense,
   hasAccessoryLicense,
 }: {
   initial: Record<Table, (CatalogItem | Vehicle)[]>;
   balance: number;
   canBuy: boolean;
   myRankSortOrder: number;
-  hasWeaponLicense: boolean;
   hasAccessoryLicense: boolean;
 }) {
   const [data, setData] = useState(initial);
@@ -157,7 +155,6 @@ export function CatalogTabs({
                           balance={balance}
                           canBuy={canBuy}
                           myRankSortOrder={myRankSortOrder}
-                          hasWeaponLicense={hasWeaponLicense}
                           hasAccessoryLicense={hasAccessoryLicense}
                           comparing={compareItems.some((c) => c.item.id === item.id)}
                           onToggleCompare={() => toggleCompare(item, table)}
@@ -273,7 +270,6 @@ function ItemCard({
   balance,
   canBuy,
   myRankSortOrder,
-  hasWeaponLicense,
   hasAccessoryLicense,
   comparing,
   onToggleCompare,
@@ -283,7 +279,6 @@ function ItemCard({
   balance: number;
   canBuy: boolean;
   myRankSortOrder: number;
-  hasWeaponLicense: boolean;
   hasAccessoryLicense: boolean;
   comparing: boolean;
   onToggleCompare: () => void;
@@ -301,11 +296,9 @@ function ItemCard({
   const now = useNow();
   const isNew = now - new Date(item.created_at).getTime() < NEW_ITEM_WINDOW_MS;
 
-  // License gate: licenses themselves are always purchasable; other weapons/accessories require the license
+  // License gate: only accessories require the accessories license; licenses themselves always pass
   const isLicense = /licencia/i.test(item.name);
-  const licenseOk =
-    isLicense ||
-    (table === "weapons" ? hasWeaponLicense : table === "accessories" ? hasAccessoryLicense : true);
+  const licenseOk = table !== "accessories" || isLicense || hasAccessoryLicense;
 
   const disabled = pending || !canBuy || !inStock || !affordable || !rankOk || !licenseOk;
 
@@ -374,10 +367,7 @@ function ItemCard({
           <p className="text-xs text-destructive">🔒 Requiere un rango más alto para comprar.</p>
         )}
         {!licenseOk && (
-          <p className="text-xs text-amber-400">
-            🔒 Requiere{" "}
-            {table === "weapons" ? "Licencia de Modificación de Armamento" : "Licencia de Accesorios"}.
-          </p>
+          <p className="text-xs text-amber-400">🔒 Requiere Licencia de Accesorios.</p>
         )}
         <Button
           size="sm"
@@ -396,9 +386,7 @@ function ItemCard({
                 : !rankOk
                   ? "Rango insuficiente"
                   : !licenseOk
-                    ? table === "weapons"
-                      ? "Necesitás la Licencia de Modificación de Armamento"
-                      : "Necesitás la Licencia de Accesorios"
+                    ? "Necesitás la Licencia de Accesorios"
                     : undefined
           }
         >

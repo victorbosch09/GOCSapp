@@ -28,11 +28,10 @@ export async function purchaseItem(itemTable: CatalogTable, itemId: string) {
 
   const admin = createAdminClient();
 
-  // License prerequisite gate for weapons and accessories
-  if (itemTable === "weapons" || itemTable === "accessories") {
-    // Fetch the item being purchased to check if it's itself a license
+  // License prerequisite gate: only accessories require a license
+  if (itemTable === "accessories") {
     const { data: itemData } = await admin
-      .from(itemTable)
+      .from("accessories")
       .select("name")
       .eq("id", itemId)
       .single();
@@ -40,24 +39,16 @@ export async function purchaseItem(itemTable: CatalogTable, itemId: string) {
     const isLicense = /licencia/i.test(itemData?.name ?? "");
 
     if (!isLicense) {
-      // Check if soldier owns the required license in their inventory
-      const licensePattern =
-        itemTable === "weapons" ? "licencia de modificaci" : "licencia de accesorio";
-
       const { data: licenseInInventory } = await admin
         .from("inventory")
         .select("id")
         .eq("profile_id", user.id)
-        .eq("item_table", itemTable)
-        .ilike("item_name", `%${licensePattern}%`)
+        .eq("item_table", "accessories")
+        .ilike("item_name", "%licencia%")
         .limit(1);
 
       if (!licenseInInventory || licenseInInventory.length === 0) {
-        const msg =
-          itemTable === "weapons"
-            ? "Necesitás comprar la Licencia de Modificación de Armamento antes de adquirir armas."
-            : "Necesitás comprar la Licencia de Accesorios antes de adquirir accesorios.";
-        return { error: msg };
+        return { error: "Necesitás comprar la Licencia de Accesorios antes de adquirir accesorios." };
       }
     }
   }
