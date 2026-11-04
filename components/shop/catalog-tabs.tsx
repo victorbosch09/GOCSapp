@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { purchaseItem } from "@/lib/actions/shop";
+import { purchaseItem, subscribeInsurance, unsubscribeInsurance } from "@/lib/actions/shop";
 import { useNow } from "@/lib/hooks/use-now";
 import { formatCredits } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table as UITable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { CatalogItem, Vehicle } from "@/types/database";
+import type { CatalogItem, Vehicle, RecurringExpense } from "@/types/database";
+
+type InsuranceItem = RecurringExpense & { subscribed: boolean };
 
 const NEW_ITEM_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const LOW_STOCK_THRESHOLD = 2;
@@ -45,14 +47,19 @@ export function CatalogTabs({
   canBuy,
   myRankSortOrder,
   hasAccessoryLicense,
+  hasEquipmentLicense,
+  insurance,
 }: {
   initial: Record<Table, (CatalogItem | Vehicle)[]>;
   balance: number;
   canBuy: boolean;
   myRankSortOrder: number;
   hasAccessoryLicense: boolean;
+  hasEquipmentLicense: boolean;
+  insurance: InsuranceItem[];
 }) {
   const [data, setData] = useState(initial);
+  const [insuranceItems, setInsuranceItems] = useState(insurance);
   const [search, setSearch] = useState("");
   const [hideOutOfStock, setHideOutOfStock] = useState(false);
   const [compareItems, setCompareItems] = useState<{ item: CatalogItem | Vehicle; table: Table }[]>([]);
@@ -129,6 +136,7 @@ export function CatalogTabs({
               {t.label}
             </TabsTrigger>
           ))}
+          <TabsTrigger value="seguros">Seguros</TabsTrigger>
         </TabsList>
         {TABS.map(({ table }) => {
           const visible = data[table].filter(
@@ -156,6 +164,7 @@ export function CatalogTabs({
                           canBuy={canBuy}
                           myRankSortOrder={myRankSortOrder}
                           hasAccessoryLicense={hasAccessoryLicense}
+                          hasEquipmentLicense={hasEquipmentLicense}
                           comparing={compareItems.some((c) => c.item.id === item.id)}
                           onToggleCompare={() => toggleCompare(item, table)}
                         />
@@ -167,6 +176,31 @@ export function CatalogTabs({
             </TabsContent>
           );
         })}
+
+        <TabsContent value="seguros" className="flex flex-col gap-4">
+          <p className="text-xs text-muted-foreground">
+            Seguros opcionales — el costo se descuenta de tus créditos personales.
+          </p>
+          {insuranceItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay seguros disponibles.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {insuranceItems.map((ins) => (
+                <InsuranceCard
+                  key={ins.id}
+                  item={ins}
+                  balance={balance}
+                  canBuy={canBuy}
+                  onSubscribeChange={(newState) =>
+                    setInsuranceItems((prev) =>
+                      prev.map((i) => (i.id === ins.id ? { ...i, subscribed: newState } : i))
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       {compareItems.length > 0 && (
@@ -271,6 +305,7 @@ function ItemCard({
   canBuy,
   myRankSortOrder,
   hasAccessoryLicense,
+  hasEquipmentLicense,
   comparing,
   onToggleCompare,
 }: {
@@ -280,6 +315,7 @@ function ItemCard({
   canBuy: boolean;
   myRankSortOrder: number;
   hasAccessoryLicense: boolean;
+  hasEquipmentLicense: boolean;
   comparing: boolean;
   onToggleCompare: () => void;
 }) {
@@ -296,9 +332,11 @@ function ItemCard({
   const now = useNow();
   const isNew = now - new Date(item.created_at).getTime() < NEW_ITEM_WINDOW_MS;
 
-  // License gate: only accessories require the accessories license; licenses themselves always pass
+  // License gate: accessories and equipment require their respective license; licenses always pass
   const isLicense = /licencia/i.test(item.name);
-  const licenseOk = table !== "accessories" || isLicense || hasAccessoryLicense;
+  const licenseOk =
+    isLicense ||
+    (table === "accessories" ? hasAccessoryLicense : table === "equipment" ? hasEquipmentLicense : true);
 
   const disabled = pending || !canBuy || !inStock || !affordable || !rankOk || !licenseOk;
 
@@ -367,7 +405,10 @@ function ItemCard({
           <p className="text-xs text-destructive">🔒 Requiere un rango más alto para comprar.</p>
         )}
         {!licenseOk && (
-          <p className="text-xs text-amber-400">🔒 Requiere Licencia de Accesorios.</p>
+          <p className="text-xs text-amber-400">
+            🔒 Requiere{" "}
+            {table === "equipment" ? "Licencia de Modificación de Equipamiento" : "Licencia de Accesorios"}.
+          </p>
         )}
         <Button
           size="sm"
@@ -386,7 +427,9 @@ function ItemCard({
                 : !rankOk
                   ? "Rango insuficiente"
                   : !licenseOk
-                    ? "Necesitás la Licencia de Accesorios"
+                    ? table === "equipment"
+                      ? "Necesitás la Licencia de Modificación de Equipamiento"
+                      : "Necesitás la Licencia de Accesorios"
                     : undefined
           }
         >
@@ -400,6 +443,83 @@ function ItemCard({
                   ? "Licencia requerida"
                   : "Comprar"}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InsuranceCard({
+  item,
+  balance,
+  canBuy,
+  onSubscribeChange,
+}: {
+  item: InsuranceItem;
+  balance: number;
+  canBuy: boolean;
+  onSubscribeChange: (subscribed: boolean) => void;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  function handleSubscribe() {
+    startTransition(async () => {
+      const result = await subscribeInsurance(item.id);
+      if (result?.error) toast.error(result.error);
+      else {
+        toast.success(`Suscripto a ${item.name}`);
+        onSubscribeChange(true);
+      }
+    });
+  }
+
+  function handleUnsubscribe() {
+    startTransition(async () => {
+      const result = await unsubscribeInsurance(item.id);
+      if (result?.error) toast.error(result.error);
+      else {
+        toast.success(`Te diste de baja de ${item.name}`);
+        onSubscribeChange(false);
+      }
+    });
+  }
+
+  const affordable = balance >= item.base_amount;
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-sm font-medium leading-snug">{item.name}</CardTitle>
+          {item.subscribed && (
+            <Badge className="bg-emerald-500/15 text-emerald-400 shrink-0" variant="secondary">
+              Activo
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        <p className="font-heading text-lg text-gocs-red">
+          {item.base_amount > 0 ? formatCredits(item.base_amount) : "Gratis"}
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            /{item.frequency === "weekly" ? "semana" : "mes"}
+          </span>
+        </p>
+        {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+        {item.subscribed ? (
+          <Button size="sm" variant="outline" disabled={pending} onClick={handleUnsubscribe} className="mt-2">
+            {pending ? "Procesando..." : "Cancelar suscripción"}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            disabled={pending || !canBuy || (!affordable && item.base_amount > 0)}
+            onClick={handleSubscribe}
+            className={canBuy && (affordable || item.base_amount === 0) ? "mt-2 bg-emerald-600 text-white hover:bg-emerald-500" : "mt-2"}
+            title={!affordable && item.base_amount > 0 ? "Saldo insuficiente" : undefined}
+          >
+            {pending ? "Procesando..." : !affordable && item.base_amount > 0 ? "Saldo insuficiente" : "Suscribirse"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

@@ -135,6 +135,13 @@ export type RecurringExpense = {
   created_at: string;
 };
 
+export type InsuranceSubscription = {
+  id: string;
+  profile_id: string;
+  expense_id: string;
+  subscribed_at: string;
+};
+
 export type ExpensePayment = {
   id: string;
   expense_id: string;

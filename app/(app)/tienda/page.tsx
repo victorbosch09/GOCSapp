@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentProfile } from "@/lib/data/profile";
-import { getFullCatalog } from "@/lib/data/catalog";
+import { getFullCatalog, getInsuranceCatalog } from "@/lib/data/catalog";
 import { getOwnInventory } from "@/lib/data/dashboard";
 import { formatCredits } from "@/lib/format";
 import { CatalogTabs } from "@/components/shop/catalog-tabs";
@@ -8,15 +8,17 @@ import { CatalogTabs } from "@/components/shop/catalog-tabs";
 export const metadata: Metadata = { title: "Tienda — G.O.C.S." };
 
 export default async function TiendaPage() {
-  const [profile, catalog, inventory] = await Promise.all([
-    getCurrentProfile(),
+  const profile = await getCurrentProfile();
+
+  const [catalog, inventory, insurance] = await Promise.all([
     getFullCatalog(),
     getOwnInventory(),
+    getInsuranceCatalog(profile.id),
   ]);
 
-  const hasAccessoryLicense = inventory.some(
-    (i) => i.item_table === "accessories" && /licencia de accesorio/i.test(i.item_name ?? "")
-  );
+  // License flags: check across ALL inventory tables (license item may be in a different catalog)
+  const hasAccessoryLicense = inventory.some((i) => /licencia.*accesorio/i.test(i.item_name ?? ""));
+  const hasEquipmentLicense = inventory.some((i) => /licencia.*equipamiento/i.test(i.item_name ?? ""));
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,6 +44,8 @@ export default async function TiendaPage() {
         canBuy={profile.approved}
         myRankSortOrder={profile.rank?.sort_order ?? -1}
         hasAccessoryLicense={hasAccessoryLicense}
+        hasEquipmentLicense={hasEquipmentLicense}
+        insurance={insurance}
       />
     </div>
   );
